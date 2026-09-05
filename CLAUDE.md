@@ -20,7 +20,7 @@ Retyping a change is exactly how the two drift; one reflowed line or reworded cl
 
 It adds a layer and replaces nothing: every notification stays an `Illuminate\Notifications\Notification`, every channel stays a Laravel channel, `Notification::send()` stays the entry point.
 
-The library has no host app — tests run against `orchestra/testbench` with in-memory SQLite. `SETUP.md` is the original working brief; it goes once the README, guideline and skill carry the same information.
+The library has no host app — tests run against `orchestra/testbench` with in-memory SQLite.
 
 ## Commands
 
