@@ -26,6 +26,27 @@ updates:
           - 'minor'
           - 'patch'
 
+  - package-ecosystem: 'composer'
+    commit-message:
+      prefix: 'fix(deps)'
+      prefix-development: 'chore(deps-dev)'
+    directory: '/'
+    target-branch: 'dev'
+    schedule:
+      interval: 'weekly'
+    cooldown:
+      default-days: 3
+    labels:
+      - 'dependencies'
+      - 'stack: php'
+    groups:
+      composer-minor-patch:
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
   - package-ecosystem: 'github-actions'
     commit-message:
       prefix: 'chore(deps)'
@@ -71,6 +92,18 @@ updates:
     labels:
       - 'dependencies'
       - 'stack: javascript'
+
+  - package-ecosystem: 'composer'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: 'fix(deps)'
+      prefix-development: 'chore(deps-dev)'
+    labels:
+      - 'dependencies'
+      - 'stack: php'
 
   - package-ecosystem: 'github-actions'
     directory: '/'
