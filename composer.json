@@ -1,0 +1,92 @@
+{
+  "$schema": "https://getcomposer.org/schema.json",
+  "name": "kirchdev/laravel-notification-delivery",
+  "description": "The layer Laravel's notifications leave out: stored notifications with read state, per-recipient channel preferences, and a gate chain that decides delivery before via() runs.",
+  "type": "library",
+  "license": "MIT",
+  "keywords": [
+    "laravel",
+    "notifications",
+    "inbox",
+    "preferences",
+    "channels",
+    "broadcasting",
+    "delivery"
+  ],
+  "authors": [
+    {
+      "name": "Titus Kirch",
+      "email": "titus.kirch@kirch.dev",
+      "homepage": "https://kirch.dev",
+      "role": "Developer"
+    }
+  ],
+  "homepage": "https://github.com/kirchDev/laravel-notification-delivery",
+  "support": {
+    "issues": "https://github.com/kirchDev/laravel-notification-delivery/issues",
+    "source": "https://github.com/kirchDev/laravel-notification-delivery"
+  },
+  "require": {
+    "php": "^8.4",
+    "illuminate/broadcasting": "^13.0",
+    "illuminate/bus": "^13.0",
+    "illuminate/console": "^13.0",
+    "illuminate/contracts": "^13.0",
+    "illuminate/database": "^13.0",
+    "illuminate/events": "^13.0",
+    "illuminate/notifications": "^13.0",
+    "illuminate/queue": "^13.0",
+    "illuminate/support": "^13.0",
+    "spatie/laravel-package-tools": "^1.93.1"
+  },
+  "require-dev": {
+    "kirchdev/laravel-device-sessions": "^0.2",
+    "larastan/larastan": "^3.9",
+    "laravel/pint": "^1.29",
+    "orchestra/testbench": "^11.0",
+    "pestphp/pest": "^5.0",
+    "pestphp/pest-plugin-laravel": "^5.0"
+  },
+  "suggest": {
+    "kirchdev/laravel-device-sessions": "Enables the presence-aware suppression policy."
+  },
+  "autoload": {
+    "psr-4": {
+      "KirchDev\\NotificationDelivery\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "KirchDev\\NotificationDelivery\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "vendor/bin/pest",
+    "test:fast": "vendor/bin/pest --compact --parallel",
+    "test:coverage": [
+      "Composer\\Config::disableProcessTimeout",
+      "@php -d pcov.directory=src vendor/bin/pest --compact --coverage --min=0"
+    ],
+    "pint": "vendor/bin/pint --test",
+    "pint:fix": "vendor/bin/pint",
+    "larastan": "vendor/bin/phpstan analyse --memory-limit=512M"
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-main": "0.x-dev"
+    },
+    "laravel": {
+      "providers": [
+        "KirchDev\\NotificationDelivery\\NotificationDeliveryServiceProvider"
+      ]
+    }
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {
+      "pestphp/pest-plugin": true
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}
