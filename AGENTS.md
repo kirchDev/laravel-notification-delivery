@@ -14,130 +14,63 @@ cp CLAUDE.md AGENTS.md   # or the reverse, whichever you just edited
 
 Retyping a change is exactly how the two drift; one reflowed line or reworded clause is enough. `diff CLAUDE.md AGENTS.md` must print nothing. If it ever does, treat it as a defect and fix it by letting one file win wholesale — never by merging them.
 
-## What this repo is
+## What this is
 
-`scaffold` is a **GitHub template repository**, not an application. It ships the meta layer (lint, format, commit hooks, CI, CodeQL, Dependabot, release-please, issue/PR templates, standard meta docs) that every new kirchDev repo should start with. There is no application code — the project code can be anything (PHP, Go, Rust, Vue, shell). Only the meta layer lives here.
+`kirchdev/laravel-notification-delivery` is a standalone Composer **library** (not an application) that adds three things to Laravel 13's notifications: persistence with read state, per-recipient channel preferences, and a gate chain that decides delivery before `via()` runs. PHP 8.4+, ships its own service provider auto-discovered via `extra.laravel.providers`.
 
-Implication: when changing files, ask "does this default make sense for _every_ future repo created from this template?" — not just for one project type.
+It adds a layer and replaces nothing: every notification stays an `Illuminate\Notifications\Notification`, every channel stays a Laravel channel, `Notification::send()` stays the entry point.
+
+The library has no host app — tests run against `orchestra/testbench` with in-memory SQLite. `SETUP.md` is the original working brief; it goes once the README, guideline and skill carry the same information.
 
 ## Commands
 
-| Command             | What it does                                               |
-| :------------------ | :--------------------------------------------------------- |
-| `pnpm install`      | Install deps and wire husky hooks via the `prepare` script |
-| `pnpm lint`         | `oxlint . --deny-warnings`                                 |
-| `pnpm format`       | `oxfmt --check .` (note: `format` is the check, not fix)   |
-| `pnpm typecheck`    | `tsc --noEmit` over the meta scripts                       |
-| `pnpm check`        | Runs `lint` + `format` + `typecheck` + `check:policy` — the CI gate |
-| `pnpm check:policy` | Proves the two agent policy files ban the same commands    |
-| `pnpm lint:fix`     | Auto-fix lint                                              |
-| `pnpm format:fix`   | Auto-fix format                                            |
-| `pnpm check:fix`    | Auto-fix lint + format                                     |
-| `pnpm skills:update`| Update project-scoped agent skills via the skills.sh CLI   |
-| `pnpm taze`         | Interactive dependency upgrade check                       |
-| `pnpm taze:w`       | Write upgrade results                                      |
+PHP (Composer scripts):
 
-There is no test suite — this is config-only. CI runs `pnpm lint`, `pnpm format`, `pnpm typecheck` and `pnpm check:policy` on PR.
+- `composer test` — Pest 5 suite via Testbench.
+- `composer test -- --filter=SomeTest` — run a single test / pattern.
+- `composer test:coverage` — coverage report; CI gates at 90%.
+- `composer pint` — Laravel Pint in **test** mode (no writes). `composer pint:fix` to auto-fix.
+- `composer larastan` — Larastan/PHPStan at `--memory-limit=512M`.
 
-## Architecture / conventions
+Node tooling (lint/format only, no app code):
 
-- **Node 24, pnpm 11.** Pinned via `.nvmrc`, `engines`, and `packageManager`. `pnpm-workspace.yaml` enforces `minimumReleaseAge=4320` (3-day cooldown), isolated node-linker. Don't loosen these without reason. Package-manager enforcement carries no key on purpose: pnpm 11 replaced `packageManagerStrict`/`packageManagerStrictVersion` with `pmOnFail`, whose default `download` already errors on a foreign package manager and fetches the pinned pnpm version — every other value only weakens it, so leave it unset (the rationale sits as a comment in the file).
-- **oxc, not eslint/prettier.** Linting via `oxlint`, formatting via `oxfmt`. Configs live in `.oxlintrc.json` / `.oxfmtrc.json`. `oxlint` uses `unicorn` + `oxc` plugins; rules deliberately minimal.
-- **TypeScript, no build step.** The meta scripts and the three tool configs are `.ts` — Node 24 strips types natively, so `scripts/check-policy-parity.ts`, `commitlint.config.ts`, `lint-staged.config.ts` and `taze.config.ts` stay directly executable and each tool loads its own `.ts` config unaided. `tsconfig.json` is `noEmit` + `strict` + `erasableSyntaxOnly`, so only strippable syntax (no enums, no parameter properties) can be written; `pnpm typecheck` is the gate. TypeScript is a devDependency of the template's meta layer only — a downstream PHP, Go or Rust repo inherits it for that and nothing else, and drops it by deleting `tsconfig.json`, the `typecheck` script and the four `.ts` files' types.
-- **Husky hooks** (`.husky/pre-commit`, `.husky/commit-msg`) run `lint-staged` and `commitlint`. `lint-staged.config.ts` excludes `README.md`, `CLAUDE.md`, and `AGENTS.md` (free-form prose) and `pnpm-lock.yaml`. `oxlint --fix --deny-warnings` then `oxfmt` on JS/TS; `oxfmt` only on JSON/YAML/MD.
-- **Conventional Commits enforced** via `@commitlint/config-conventional`. Don't `--no-verify` unless explicitly asked.
-- **release-please is included** (unlike many templates that omit it). Files: `release-please-config.json`, `.release-please-manifest.json`, `.github/workflows/release-please.yml`. Config uses `release-type: simple` (language-agnostic), `include-v-in-tag: true`. Downstream repos start at `0.0.0` and reset via the steps in README → _Resetting release-please_.
-- **Workflows** use `actions/checkout@v6`, `actions/setup-node@v6`, `pnpm/action-setup@v6`, `github/codeql-action/{init,analyze}@v4`. Keep these pinned to major versions; Dependabot bumps them monthly.
-- **CodeQL** scans `actions` + `javascript-typescript` with `security-extended,security-and-quality` queries, gated by path filters so non-code changes don't trigger it.
-- **Dependabot** groups all minor/patch updates per ecosystem into a single PR (`npm-minor-patch`, `actions-minor-patch`). Majors come as separate PRs.
+- `pnpm check` / `pnpm check:fix` — oxlint + oxfmt over JS / JSON / YAML / MD.
+- Husky runs Pint + Larastan + oxlint + oxfmt on commit via lint-staged. Don't `--no-verify` unless explicitly asked.
 
-## AI & skills
+Commits **must** follow Conventional Commits (commitlint enforced). Branch off `dev` and PR into `dev`; `main` is the release branch and release-please cuts from there.
 
-- **`.claude/settings.json`** ships a baseline permission policy — see _Permission policy_ below for the rules it follows. `.claude/settings.local.json` (per-machine overrides, typically `enabledMcpjsonServers`) is gitignored.
-- **`.tituskirch-skills.json`** configures the [TitusKirch skills](https://github.com/TitusKirch/skills) (commit, PR, issue, release, docs …) per repo. It is the runtime **config**, not an installer. Regenerate/reconcile it with the `tituskirch-skills-config` skill.
-- **Installing the skills.** The bundle is installed via the skills.sh CLI (`pnpm dlx skills add TitusKirch/skills`), not vendored into the repo. `pnpm skills:update` refreshes project-scoped skills tracked in `skills-lock.json` (only present once a repo actually installs project skills).
+## Architecture
 
-## Permission policy
+**Types are enums, channels are an interface.** `Contracts/NotificationType` is implemented by an application's own enum: a **static** `group()` (the group belongs to the enum, not the case) and a per-case `definition()`. `Contracts/Channel` is likewise an enum interface — the package ships `Enums/CoreChannel` (`inbox`, `live`, `mail`) and an application adds its own. An enum in the package would be closed, and nobody could ever add push.
 
-`.claude/settings.json` is deliberately lopsided: a **long `deny` list and a short `allow` list**. The two sides answer different questions, so they follow opposite rules.
+**`Support/DeliveryResolver` is the gate chain**, and the centre of the package. Four gates per channel, in order: availability, locked, the recipient's preference, then `Contracts/SuppressionPolicy`. `TypedNotification::via()` calls it and hands back the survivors' `laravelChannel()` values.
 
-**`deny` may be generous.** A rule for a command the repo doesn't have is a no-op, it never needs maintenance, and it is never reviewed — a too-broad block only surfaces when you actually hit it. So the list covers every stack kirchDev repos might grow into (Laravel, Prisma, Terraform/OpenTofu, AWS), not just this one. `git reflog expire` and `git gc --prune=now` are in there because they destroy the rescue path that survives a `reset --hard`.
+The decision is memoised per `(notification, notifiable)` in a **`WeakMap`, not an array keyed by `spl_object_id`** — an object id is reused once its object is collected, and a worker sending thousands of notifications would eventually answer one notification's question with another's decision. It is read twice: by `via()`, and by `InboxChannel` asking whether `live` survived.
 
-The line to draw is **the machine or something remote, not the working copy**. Blocked: anything that wrecks the OS (`dd`, `mkfs`, `chmod -R`, `rm -rf /…`), tears down remote state or resources (`terraform destroy`, `state rm`, `aws ec2 terminate-instances`, `gh repo delete`), or throws away work with no recovery path (force-push, `reset --hard`, `stash drop`). Deliberately *not* blocked, because they are ordinary local development: `rm -rf node_modules`, `docker volume rm`, `docker compose down -v`, `docker system prune`, `php artisan tinker`, deleting a remote branch. Those prompt instead — a command that is sometimes wanted belongs in the middle state, never in `deny`.
+**`Channels/InboxChannel` writes the row and fires the one broadcast.** `Channels/LiveChannel` delivers nothing on purpose — `live` only decides whether `announce: true` sits on the payload `InboxChannel` broadcasts. The class exists so `live` has a `laravelChannel()` like every other channel and needs no special case in the chain.
 
-**`allow` must stay short.** Its only return is fewer prompts — no safety is gained. Every line has to be read and understood by whoever copies this file, and an unreviewed allow list is more dangerous than none. Keep what occurs many times per session (read-only git, `ls`/`grep`/`rg`, the project's own check scripts) and let everything else ask.
+**`Support/PreferenceResolver` is gate 3**, three tiers deep (type row → `group:` row → the type's default), serving every lookup for one recipient from a single query. `null` means undecided, **not off** — that is what lets a new type ship with a sensible default and no backfill.
 
-**Three states, not two.** A command in `allow` runs unasked; one in `deny` is impossible and has to be typed by hand; one in **neither list prompts you** — and that middle state is the right default for almost everything. Reserve `deny` for what a mistaken "yes" could not undo. A normal `git push` is not that: it is reversible, visible and the ordinary way work ships, so it sits in `allow`.
+**`Jobs/DeliverDeferredNotification` is the answer to "`via()` cannot wait".** A policy that defers drops the channel from `via()` and schedules this instead; it re-checks on execution and either delivers or discards. It sends through `Notification::sendNow()` with an **explicit channel list** rather than re-sending the notification — re-running `via()` would write a second inbox row.
 
-> [!IMPORTANT]
-> **Never allow a rule that runs arbitrary code.** `php artisan tinker --execute`, `pnpm exec turbo run`, `find . *` (which covers `-delete` and `-exec rm`), a raw `pnpm dlx`, or an MCP tool that executes SQL (`database-query`, `run-query`) each hand back everything the `deny` list took away — a blocked `db:wipe` means nothing next to an allowed `tinker --execute 'DB::statement(...)'`. A deny list is only as strong as the weakest allow rule beside it.
+Everything host-facing is a contract in `src/Contracts/` (`Channel`, `NotificationType`, `NotificationGroup`, `SuppressionPolicy`). Models (`DeliveredNotification`, `NotificationPreference`) are swappable via `config('notification-delivery.models.*')` and key-type agnostic via `HasConfigurableKey` (id / uuid / ulid from config). `HasNotificationDelivery` goes on the recipient.
 
-Two things this file cannot do, by design: it cannot tell which branch a `git push` targets (protect release branches with **branch protection**, not permissions), and prefix rules miss flags placed before the subcommand (`docker compose -f x.yml down -v`). Treat it as lowering the odds, not as a guarantee.
+## Things that are easy to get wrong
 
-Downstream repos keep the `deny` list as-is and swap the `pnpm` lines in `allow` for whatever their stack runs.
-
-**Codex gets the same policy** in `.codex/rules/default.rules` — permission config is not portable, so the block list exists twice and **both must be changed together**. Codex uses Starlark `prefix_rule()` calls matching on argument *tokens*, which handles flags and shell chains that the `Bash(…)` prefix patterns miss, and every rule carries its own `match`/`not_match` cases. Check a rule with:
-
-```bash
-codex execpolicy check --pretty --rules .codex/rules/default.rules -- git push --force
-```
-
-**Parity between the two is machine-checked, not eyeballed.** `pnpm check:policy` (`scripts/check-policy-parity.ts`, part of `pnpm check` and of CI) expands every `prefix_rule` into its concrete argv prefixes — the cartesian product over its alternation lists — and matches the two sets in both directions, so "we changed both files" becomes a number rather than a claim. Two things it encodes are worth knowing before editing either file:
-
-- **The languages differ, so a few gaps cannot be closed.** Claude Code matches a prefix of the command _string_; a `prefix_rule` matches whole argv _tokens_. `Bash(aws iam delete-:*)` therefore bans every delete verb AWS will ever ship, and the Codex side can only enumerate the ones it ships today. Such a difference is legal but must be **declared** — in the `DELIBERATE` list in the script and in the `.codex/rules/default.rules` header — and the check fails both on an undeclared one and on a declaration that has gone stale.
-- **Neither language normalises flag order or case.** `rm -rf /` and `rm -fr /` are separate bans; `rm -r -f /` and `redis-cli FlushAll` are neither, and enumerating permutations never ends. The check proves the two files list the **same spellings** — it does not claim the set of spellings is complete. Same caveat as the two below, and for the same reason.
-
-## Workflows are calls, not copies
-
-Every file in `.github/workflows/` is a **stub**: a trigger and a `uses:` pointing at a body in [`kirchDev/workflows`](https://github.com/kirchDev/workflows). A repo created from this template inherits the calls, not 727 lines of workflow — and a fix made centrally reaches it on its next Dependabot bump instead of never.
-
-What follows for a new repo:
-
-- **Do not paste a workflow body back in.** If a stub almost fits, the answer is an input on the body or an own job beside the call — see that repository's `docs/1.guides/2.add-a-body.md`.
-- **The pins are commit SHAs with the version as a trailing comment.** Dependabot raises the bumps; the `github-actions` ecosystem is already configured in `.github/dependabot.yml`.
-- **A repo that publishes something** adds its own job to `release-please.yml`, gated on `needs.release-please.outputs.release-created`.
-- **A repo with a compiled language** names it in `codeql.yml`'s `languages` input rather than forking the workflow.
-- **Checks come from `package.json`.** `ci.yml` runs whatever the `check` script chains, so adding a check needs no workflow change at all.
-
-## Branching model
-
-The default here is a **`dev` integration branch**: branch off `dev`, PR into `dev`, roll `dev` up into `main`, and release-please releases from `main`. That is what most kirchDev repos run, so the template runs it too — a variant that ships switched off is a variant nobody notices is broken.
-
-> [!IMPORTANT]
-> A repo created from this template has the `dev` config but **no `dev` branch**. Create it before the first Dependabot run: with `target-branch: 'dev'` pointing at a branch that doesn't exist, Dependabot opens nothing at all. Going main-only (below) is a deliberate step too — leaving the config untouched is the one option that silently does nothing.
-
-`.github/workflows/promotion-pr.yml` opens and updates the rolling draft promotion PR. Mark that PR ready and **merge it with a merge commit, never a squash**: squashing collapses the individual `feat:`/`fix:` commits into the PR's own `chore:` title, and release-please then cuts nothing.
-
-It calls a central body that picks its own target: with a `stage` branch it promotes `dev` into `stage`, without one straight into `main`. The stub is therefore the same file whichever flow a repo is on.
-
-Going **main-only** is three edits, all of them removals:
-
-```bash
-rm .github/workflows/promotion-pr.yml
-# .github/dependabot.yml    — drop both `target-branch: 'dev'` lines
-# .tituskirch-skills.json   — set `pr.base` to "main"
-```
-
-Nothing is vendored for this. A variant worth shipping as files is one that *adds* something — content that would otherwise be lost. A variant that only deletes has nothing to preserve, so it stays documented, exactly like _Public vs private repos_ below.
-
-`ci.yml` and `codeql.yml` list both `main` and `dev` in their `on: branches:` filters and neither edit touches them. A filter naming a branch that doesn't exist is a no-op, so it costs a main-only repo nothing — and without `dev` in `ci.yml`, PRs into `dev` (Dependabot's included) would run no CI at all.
-
-Variants that are *purely* deletions — see _Public vs private repos_ below — stay documented rather than vendored; only this one earns the folder.
-
-## Public vs private repos
-
-Some meta defaults only make sense for one visibility. When spinning up a repo from this template, adjust for its visibility:
-
-- **CodeQL / code scanning** (`.github/workflows/codeql.yml`) depends on GitHub Advanced Security. It's free on **public** repos; on a **private** repo without a GHAS license it won't run — delete `codeql.yml` (and the CodeQL note above) rather than leave a dead workflow. The same goes for other GHAS-gated features (secret scanning, etc.). Dependabot version updates work on both.
-- **License.** A **public** repo ships MIT: keep `LICENSE` and the `[MIT](LICENSE) © …` README footer. A **private** repo is proprietary: remove/replace `LICENSE`, drop the MIT footer, and set `package.json` to `"license": "UNLICENSED"` (keep `"private": true`).
-- **Discord forum links.** `.github/ISSUE_TEMPLATE/config.yml` points questions, ideas and possible bugs at the repo's Discord forum (each open-source repo gets one, provisioned from the `infrastructure` repo's OpenTofu). Confirmed bugs and features stay as the GitHub issue forms. A **private** repo has no forum — drop the `contact_links` block; if you still want an in-repo Q&A path, restore a simple `question.yml`.
-
-## House style for READMEs and meta files
-
-`/write-readme` skill encodes the canonical structure. Key rules: hero block wrapped in `<div align="center">`, prescribed section emojis (✨ Features, 🚀 Setup, 🤝 Contributing, 🛣️ Versioning, 📄 License), license footer always reads `[MIT](LICENSE) © [Titus Kirch](https://github.com/TitusKirch/) / [IT-Dienstleistungen Titus Kirch](https://kirch.dev)`. Use GitHub callouts (`> [!TIP]`, `> [!IMPORTANT]`), never plain blockquotes.
-
-## When editing this template
-
-- Every file referencing `TitusKirch/scaffold` is a placeholder that downstream users will replace. Keep the references consistent so a single `grep -rn "TitusKirch/scaffold"` catches them all.
-- `forgemap` (sibling repo at `../forgemap`) is the de-facto reference implementation of these conventions. When unsure about a config choice, check what forgemap does.
-- The template's own `package.json` is `"private": true` and `"name": "scaffold"` — not published anywhere.
+- **The recipient replaces `Notifiable`, it does not add to it.** Laravel's `Notifiable` is `RoutesNotifications` **plus** `HasDatabaseNotifications`, and the latter defines `notifications()` against Laravel's own table, which this package never writes. Left in place it is either a trait method collision or a relation that silently always comes back empty. `HasNotificationDeliveryTraitTest` pins that the fixture does not use it.
+- **Bindings are `scoped()`, never `singleton()`.** The consuming application runs Octane, where a worker outlives the request, and all four bound services cache per-request state. A singleton here is a cache that eventually answers for the wrong recipient.
+- **Config must be read at resolve time, not at register time.** The provider registers before the application's own config is in place — under Testbench it registers before `defineEnvironment()` runs at all. `SuppressionPolicy` is therefore bound to a closure; a class name decided in `packageRegistered()` would ignore whatever the application configured.
+- **`mergeConfigFrom()` merges only the top level.** Setting one nested key in a test's `defineEnvironment()` replaces that whole block, dropping every sibling default. `tests/TestCase.php` sets `keys` and `suppression` as whole arrays for exactly this reason.
+- **`laravel-device-sessions` is a `require-dev` dependency**, so the auto-binding hands every test the presence-aware policy unless it is pinned. `tests/TestCase.php` pins `NeverSuppress`; `DeviceSessionSuppressionTest` creates the `user_devices` table itself and names the policy explicitly.
+- `DeviceSessionSuppression` must read **`user_devices.last_seen_at`, never `users.last_seen_at`**. That column belongs to the application — gildstone writes it from a hand-built listener, another project has no such column — and a policy depending on it would silently never suppress there.
+- **The default morph key column has to sit in `$fillable` literally.** `fillableFromArray()` filters on `getFillable()` before `isFillable()` is ever consulted, so the `isFillable()` override only covers a *renamed* column.
+- `notification-delivery.keys.*` and `table_names.*` must be set **before** running the published migrations — the migration files read config at run time. `notifiable_morph_key_type` must match the key type of the models being notified.
+- Migrations are **publish-only** — `configurePackage()` leaves `runsMigrations()` off, so the provider never calls `loadMigrationsFrom()` and `vendor:publish --tag=notification-delivery-migrations` is the only route into a host app. `discoversMigrations()` maps each file individually and stamps the target with the publish time, one second per position — an already published copy keeps its filename, so re-publishing never duplicates a migration. The test suite loads the package path itself in `tests/TestCase.php`.
+- Source migrations are named **`0001_01_01_<sequence>_<migration>`**. The date is Laravel's own sentinel, not a claim about a day: `laravel-package-tools` strips exactly `/^\d{4}_\d{2}_\d{2}_\d{6}_/` before stamping its own. A new migration takes the next free sequence number, and that order is the only thing carrying dependency order — there is no list of migrations anywhere. `MigrationPublishingTest` asserts the source names, the prefix shape and the resulting publish order.
+- `laravel-package-tools` builds published paths as `migrations/` + `dirname($name)` + `/`, and `dirname()` of a bare filename is `.` — so every published path contains a literal `/./`. The copy resolves it; assertions must normalise it (`normalisePath()` in `MigrationPublishingTest`).
+- `bootPackageMigrations()` is **overridden** to return early outside the console: upstream computes each published name — globbing the consumer's `database/migrations` — before its own `runningInConsole()` check, so a request-time boot would otherwise pay a directory scan per migration. The guard stands down if `runsMigrations()` is ever switched on.
+- The provider extends `Spatie\LaravelPackageTools\PackageServiceProvider`. Wiring goes in `packageRegistered()`; `configurePackage()` carries only the config file, the command and the migrations. Booting the provider by hand in a test needs `->register()->boot()` — `$this->package` is built in `register()`.
+- **The prune command refuses a negative window** rather than clamping it to zero. Clamping would read as "delete everything older than right now", which is the one outcome a typo in a retention setting must never produce. Both windows default to `null`: never delete.
+- `resources/boost/` is **consumer-facing**, unlike `CLAUDE.md` / `AGENTS.md`. Laravel Boost discovers it purely from the filesystem — it reads the consumer's root `composer.json` and looks for `vendor/kirchdev/laravel-notification-delivery/resources/boost/{guidelines,skills}` — so there is no dependency on `laravel/boost` here and nothing to register. The paths are the whole contract; renaming a directory removes the package from `boost:install` without an error.
+- Third-party guidelines get **no version resolution and no fallback**: everything under `guidelines/` is always loaded, and a guideline that throws while rendering is silently replaced by an empty string. Keep `$assist` calls inside the documented `GuidelineAssist` surface (`BoostResourcesTest` asserts it against an allowlist and renders every guideline through Boost's own placeholder pipeline). A `SKILL.md` missing `name` or `description` frontmatter is discarded just as silently; keep that frontmatter flat `key: value`, since Boost parses it with `symfony/yaml` and the suite — which does not depend on it — parses it by hand.
+- Tests use Testbench; there is no `bootstrap/app.php`. Add new setup to `tests/TestCase.php` / `tests/Pest.php`. A test that calls `migrate:fresh` must call `TestCase::restoreBaselineSchema()` afterwards, not the package path alone — `migrate:fresh` drops the host `users` table too.

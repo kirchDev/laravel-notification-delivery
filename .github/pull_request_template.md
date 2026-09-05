@@ -1,6 +1,6 @@
 <!--
 Thanks for contributing! Please fill out the sections below.
-Title should follow Conventional Commits (e.g. "feat: add rate limiting").
+Title should follow Conventional Commits (e.g. "feat: add ulid key type support").
 -->
 
 ## Summary
@@ -17,9 +17,11 @@ Title should follow Conventional Commits (e.g. "feat: add rate limiting").
 
 ## Checklist
 
-- [ ] The project's checks pass locally (lint / format / tests, as applicable)
-- [ ] Tests added or updated — or not applicable
-- [ ] Docs updated (README / inline help / comments) — or not applicable
+- [ ] Tests added or updated (Pest)
+- [ ] `composer test` passes locally
+- [ ] `composer pint` and `composer larastan` pass locally
+- [ ] `pnpm check` passes locally
+- [ ] Docs updated (README / config inline docs / CHANGELOG entry handled by release-please)
 - [ ] Commits follow Conventional Commits
 
 ## Related issues
