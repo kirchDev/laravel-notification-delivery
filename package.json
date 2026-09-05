@@ -1,33 +1,18 @@
 {
   "$schema": "https://www.schemastore.org/package.json",
-  "name": "scaffold",
-  "version": "0.4.1",
-  "description": "Language-agnostic baseline template for new kirchDev repositories.",
-  "keywords": [
-    "commitlint",
-    "conventional-commits",
-    "dependabot",
-    "github-template",
-    "husky",
-    "kirchdev",
-    "nodejs",
-    "oxfmt",
-    "oxlint",
-    "pnpm",
-    "release-please",
-    "scaffold",
-    "template",
-    "typescript"
-  ],
-  "homepage": "https://github.com/TitusKirch/scaffold#readme",
+  "name": "@kirchdev/laravel-notification-delivery",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dev tooling for kirchdev/laravel-notification-delivery (Composer package).",
+  "homepage": "https://github.com/kirchDev/laravel-notification-delivery",
   "bugs": {
-    "url": "https://github.com/TitusKirch/scaffold/issues"
+    "url": "https://github.com/kirchDev/laravel-notification-delivery/issues"
   },
   "license": "MIT",
-  "author": "Titus Kirch <titus.kirch@kirch.dev>",
+  "author": "Titus Kirch <titus.kirch@kirch.dev> (https://kirch.dev)",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TitusKirch/scaffold.git"
+    "url": "git+https://github.com/kirchDev/laravel-notification-delivery.git"
   },
   "type": "module",
   "scripts": {
@@ -35,10 +20,8 @@
     "lint:fix": "oxlint . --fix --deny-warnings",
     "format": "oxfmt --check .",
     "format:fix": "oxfmt .",
-    "typecheck": "tsc --noEmit",
-    "check": "pnpm lint && pnpm format && pnpm typecheck && pnpm check:policy",
+    "check": "pnpm lint && pnpm format",
     "check:fix": "pnpm lint:fix && pnpm format:fix",
-    "check:policy": "node scripts/check-policy-parity.ts",
     "skills:update": "pnpm dlx skills@latest update -p -y",
     "taze": "taze",
     "taze:w": "taze -w",
@@ -47,14 +30,11 @@
   "devDependencies": {
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
-    "@commitlint/types": "^21.2.0",
-    "@types/node": "^26.4.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.4.1",
     "oxfmt": "0.65.0",
     "oxlint": "1.80.0",
-    "taze": "^21.1.0",
-    "typescript": "^7.0.2"
+    "taze": "^21.1.0"
   },
   "engines": {
     "node": ">=24"

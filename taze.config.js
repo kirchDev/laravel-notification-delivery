@@ -1,5 +1,5 @@
 import { defineConfig } from 'taze';
 
 export default defineConfig({
-  ignorePaths: ['**/node_modules/**']
+  ignorePaths: ['**/vendor/**', '**/node_modules/**']
 });
