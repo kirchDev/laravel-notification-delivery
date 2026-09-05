@@ -1,7 +1,7 @@
 export default {
   '*.md': (filenames) => {
     const files = filenames.filter(
-      (f) => !/(?:^|\/)(README|CLAUDE|AGENTS)\.md$/.test(f)
+      (f) => !/(?:^|\/)(README|CLAUDE|AGENTS|CHANGELOG)\.md$/.test(f)
     );
     return files.length > 0 ? `pnpm exec oxfmt ${files.join(' ')}` : [];
   },
