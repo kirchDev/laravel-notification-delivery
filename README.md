@@ -25,9 +25,9 @@ That's it. The notification is stored, the bell updates, the toast fires if the 
 
 ## 🤔 Why
 
-Laravel already delivers notifications. It does not remember them, it has no notion of a recipient preferring one channel over another, and it decides nothing before `via()` runs — so every application grows its own half of that layer, usually twice.
+Every application that needs a notification bell grows this layer itself, usually twice and never quite the same way.
 
-This package is that layer and nothing else. Every notification stays an `Illuminate\Notifications\Notification`, every channel stays a Laravel channel, `Notification::send()` stays the entry point. Only the decision changes hands.
+This package is that layer and nothing else: every notification stays an `Illuminate\Notifications\Notification`, every channel stays a Laravel channel, `Notification::send()` stays the entry point. Only the decision changes hands.
 
 ## 📦 Install & run
 
@@ -38,9 +38,7 @@ php artisan migrate
 ```
 
 > [!IMPORTANT]
-> Publish the config first (`--tag=notification-delivery-config`) and set `notification-delivery.keys.*` + `table_names.*` **before** migrating — the migrations read config at run time, and `keys.notifiable_morph_key_type` must match the key type of the models you notify.
-
-The publish step is **required, once**: the package does not auto-load its migrations, so nothing schema-related runs until the two files sit in your own `database/migrations`. Your DDL stays reviewable, in your repository, and on your deploy pipeline's terms.
+> Publish the config first (`--tag=notification-delivery-config`) and set `notification-delivery.keys.*` + `table_names.*` **before** migrating — the migrations read config at run time, and `keys.notifiable_morph_key_type` must match the key type of the models you notify. The publish step is required exactly once: the package never auto-loads its migrations, so your DDL stays reviewable, in your repository, and on your deploy pipeline's terms.
 
 > [!WARNING]
 > **Replace `Notifiable` on your recipient — don't add to it.** Laravel's `Notifiable` is `RoutesNotifications` **plus** `HasDatabaseNotifications`, and the latter defines `notifications()` against Laravel's own table, which this package never writes. Left in place it is either a trait method collision or a relation that silently always comes back empty.
@@ -56,18 +54,24 @@ class User extends Authenticatable
 }
 ```
 
-Declare a type, and send it:
+<details>
+<summary>Declaring a notification type</summary>
+
+A type is a stable string key on an enum, never a class name: classes move, and moved classes leave historical rows pointing nowhere.
 
 ```php
 enum OrganisationNotification: string implements NotificationType
 {
     case MemberInvited = 'organisation.member.invited';
 
+    // Static: the group belongs to the enum, not to the case.
     public static function group(): NotificationGroup
     {
         return Group::Organisation;
     }
 
+    // One match, so the parts cannot drift apart and a missing case throws
+    // UnhandledMatchError instead of silently yielding no channels.
     public function definition(): NotificationDefinition
     {
         return match ($this) {
@@ -80,6 +84,10 @@ enum OrganisationNotification: string implements NotificationType
 }
 ```
 
+The notification itself extends `TypedNotification` and implements `type()` and `payload()`. Do not override `via()` — that is the gate chain's method.
+
+</details>
+
 ## ✨ Features
 
 - **📥 A real inbox** — stored notifications with read/unread state, so an offline recipient still finds it later. Keyed by a **stable type string**, not a class name: classes move, and moved classes leave historical rows pointing nowhere.
@@ -91,56 +99,45 @@ enum OrganisationNotification: string implements NotificationType
 - **🧰 Config-driven schema** — models, table names, morph key column and key types (`id` / `uuid` / `ulid`) all overridable.
 - **🧪 Library-grade** — Pest 5 + Testbench, no host app needed.
 
+## 📬 The three channels
+
+| Channel | Does                                                               | Configurable | Quietable |
+| :------ | :----------------------------------------------------------------- | :----------- | :-------- |
+| `inbox` | Writes the row **and** fires `NotificationBroadcasted`. The truth. | never        | no        |
+| `live`  | The toast in an open tab — sets `announce` on the payload.         | per type     | no        |
+| `mail`  | Laravel's own mail channel.                                        | per type     | yes       |
+
+Quietable is gate 4's applicability test below. `live` is deliberately not — the tab being open is the whole point of it, so holding it back for somebody who is present is the opposite of what presence means. Push, its sibling that interrupts through the OS, is.
+
 ## 🚦 The gate chain
 
 Per notification and channel, in order. Each gate can stop the chain.
 
-| #   | Gate                                                                | Owner   |
-| :-- | :------------------------------------------------------------------ | :------ |
-| 1   | Does the type know this channel, and can this recipient resolve it? | package |
-| 2   | Is the channel locked? Then send, skipping gates 3 and 4.           | package |
+| #   | Gate                                                                   | Owner   |
+| :-- | :--------------------------------------------------------------------- | :------ |
+| 1   | Does the type know this channel, and can this recipient resolve it?    | package |
+| 2   | Is the channel locked? Then send, skipping gates 3 and 4.              | package |
 | 3   | Has the recipient switched it off? **No row means undecided, not off.** | package |
-| 4   | Does the `SuppressionPolicy` say this is a bad moment?              | **you** |
+| 4   | Does the `SuppressionPolicy` say this is a bad moment?                 | **you** |
 
 Gate 4 defaults to `NeverSuppress`, because deciding what "quiet" means would force the package to know about presence, working hours and time zones. Installing [`kirchdev/laravel-device-sessions`](https://github.com/kirchDev/laravel-device-sessions) upgrades it to a presence-aware policy; binding the contract yourself replaces both.
 
 > [!TIP]
 > **"Inbox always, live when online, otherwise mail" needs no escalation logic at all.** The inbox is locked and always runs, `live` sets `announce` and the open tab decides whether a toast appears, and a deferred mail is discarded as soon as `read_at` is set. Whoever saw the toast has read it; whoever was away has not.
 
-## 📬 The three channels
-
-| Channel | Does                                                          | User-configurable |
-| :------ | :------------------------------------------------------------ | :---------------- |
-| `inbox` | Writes the row **and** fires `NotificationBroadcasted`. The truth. | never             |
-| `live`  | The toast in an open tab — sets `announce` on the payload.    | per type          |
-| `mail`  | Laravel's own mail channel.                                   | per type          |
-
-`live` is the one that surprises people: it is **not quietable**, because the tab being open is the whole point of it. Push, its sibling that interrupts through the OS, is — and that difference is a method on the channel, not a special case in the chain.
-
-## 📋 Managing the inbox
+## 📋 Inbox & preferences
 
 The package ships **no routes** — every operation is a plain action you call from your own controllers, so the response shape stays yours:
 
 ```php
-use KirchDev\NotificationDelivery\Actions\{
-    ListNotifications, CountUnreadNotifications, MarkNotificationAsRead,
-    MarkAllNotificationsAsRead, ListNotificationPreferences, UpdateNotificationPreference
-};
-
 $inbox  = app(ListNotifications::class)->execute($user, limit: 20);
 $unread = app(CountUnreadNotifications::class)->execute($user);
 
-app(MarkNotificationAsRead::class)->execute($user, $id);   // scoped to $user — an id from a request cannot reach another inbox
-app(MarkAllNotificationsAsRead::class)->execute($user);
-
-$grid = app(ListNotificationPreferences::class)->execute($user);  // the settings page, with where each value came from
+app(MarkNotificationAsRead::class)->execute($user, $id);  // scoped to $user — an id from a request cannot reach another inbox
 app(UpdateNotificationPreference::class)->execute($user, $type, CoreChannel::Mail, false);
 ```
 
-> [!TIP]
-> Passing `null` for the last argument **clears** a preference — which is not the same as `false`. False is off; null puts the recipient back on the type's default, and is what a "reset" button wants.
-
-## 🎚️ How a preference resolves
+A preference resolves three tiers deep, and **you decide which of them your UI offers**:
 
 ```
 1. row for (recipient, type, channel)      → wins
@@ -148,9 +145,28 @@ app(UpdateNotificationPreference::class)->execute($user, $type, CoreChannel::Mai
 3. definition()->default                   → otherwise
 ```
 
-The `type` column carries either a type key or a `group:`-prefixed one — one prefix, not a second schema. **You decide which tier your UI offers.** Group-level is enough to start with; thirty individual switches are not a settings page anyone reads, and refining later costs a UI row and no migration.
+> [!TIP]
+> Passing `null` instead of `false` **clears** a preference rather than switching it off — it puts the recipient back on the type's default, and is what a "reset" button wants.
 
-Only deviations are stored, so a type added next month takes effect immediately, with its own default, for every recipient who never said anything about it.
+<details>
+<summary>The full action set, and why storage stays sparse</summary>
+
+Six actions in all, under `KirchDev\NotificationDelivery\Actions`. Beyond the four above:
+
+```php
+$inbox = app(ListNotifications::class)->execute($user, limit: 20, unreadOnly: true);
+
+app(MarkAllNotificationsAsRead::class)->execute($user);
+$grid = app(ListNotificationPreferences::class)->execute($user);  // the settings page, with where each value came from
+```
+
+Every action takes the recipient first and scopes to their rows, so an id coming from a request cannot reach somebody else's notification.
+
+The `type` column carries either a type key or a `group:`-prefixed one — one prefix, not a second schema. Group-level is enough to start with; thirty individual switches are not a settings page anyone reads, and refining later costs a UI row and no migration.
+
+Only deviations are stored, so a type added next month takes effect immediately, with its own default, for every recipient who never said anything about it — and no backfill exists to forget to run.
+
+</details>
 
 ## 📡 Events & broadcasting
 
@@ -180,12 +196,12 @@ Separately, `NotificationDefinition` carries `broadcast: false` for a bulk send 
 
 Everything host-facing is a contract — rebind it, never extend the shipped class:
 
-| Contract            | Default                            | Controls                                          |
-| :------------------ | :--------------------------------- | :------------------------------------------------ |
-| `SuppressionPolicy` | `NeverSuppress` / device-sessions  | Gate 4 — when a channel is a bad idea right now   |
-| `Channel`           | `CoreChannel`                      | Which channels exist, and how each reaches Laravel |
-| `NotificationType`  | yours                              | The type key, its group, its channel definition    |
-| `NotificationGroup` | yours                              | The bucket the middle preference tier stores against |
+| Contract            | Default                           | Controls                                             |
+| :------------------ | :-------------------------------- | :--------------------------------------------------- |
+| `SuppressionPolicy` | `NeverSuppress` / device-sessions | Gate 4 — when a channel is a bad idea right now      |
+| `Channel`           | `CoreChannel`                     | Which channels exist, and how each reaches Laravel   |
+| `NotificationType`  | yours                             | The type key, its group, its channel definition      |
+| `NotificationGroup` | yours                             | The bucket the middle preference tier stores against |
 
 <details>
 <summary>Adding push, SMS or a third-party channel</summary>
@@ -258,9 +274,7 @@ Four keys are the ones you actually set:
 'suppression' => ['policy' => null, 'presence_window' => 300, 'defer' => 120],
 ```
 
-`channels.enums` and `discovery.types` are what a settings page enumerates — **sending needs neither**. `suppression.policy` of `null` means auto: never suppress, or the presence-aware policy when device-sessions is installed.
-
-The rest — models, table names, the morph key column and the two retention windows — is documented inline in [`config/notification-delivery.php`](config/notification-delivery.php).
+`channels.enums` and `discovery.types` are what a settings page enumerates — **sending needs neither**; `suppression.policy` of `null` means auto (never suppress, or the presence-aware policy when device-sessions is installed). The rest — models, table names, the morph key column and the two retention windows — is documented inline in [`config/notification-delivery.php`](config/notification-delivery.php).
 
 ## 🌍 Translation runs on two tracks
 
@@ -271,13 +285,10 @@ Same key on both sides — and write the test that asserts every type has an ent
 ## 🧪 Testing
 
 ```bash
-composer install
-composer test       # Pest 5
-composer pint       # Laravel Pint (test mode)
-composer larastan   # Larastan / PHPStan
+composer install && composer test
 ```
 
-The test suite runs via Testbench + in-memory SQLite — no host app required.
+Pest 5 + Testbench with in-memory SQLite — no host app required. The full gate (Pint, Larastan, the Node tooling) is in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## 🤝 Contributing
 
