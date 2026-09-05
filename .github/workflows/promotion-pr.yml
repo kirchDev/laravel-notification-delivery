@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+# Opens and updates the rolling draft promotion PR. The body picks its target by
+# asking whether a `stage` branch exists, so this file is identical whether the
+# repo runs `dev → main` or `dev → stage → main`.
+name: Promotion PR
+
+on:
+  push:
+    branches:
+      - dev
+      - stage
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  promotion-pr:
+    name: Promotion PR
+    uses: kirchDev/workflows/.github/workflows/_promotion-pr.yml@7fd4eaf529500fcd07c527ae70c839ab9ac7d76f # v0.7.0
