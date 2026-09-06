@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Notifications\ChannelManager;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification as NotificationFacade;
@@ -96,4 +97,32 @@ it('delivers nothing from the live channel itself', function () {
 
     // The one WebSocket event is fired by the inbox; `live` only decides `announce` on it.
     expect((new LiveChannel)->send($user, notificationOf()))->toBeNull();
+});
+
+it('honours a preference stored after the channel object was built', function () {
+    Event::fake([NotificationBroadcasted::class]);
+
+    $user = makeUser();
+
+    // Laravel's ChannelManager is a singleton and caches the channel it built for the first
+    // delivery. Anything the channel holds from that first resolve outlives every scope reset —
+    // which is what Octane does between requests, and the queue worker between jobs.
+    $manager = app(ChannelManager::class);
+    $manager->driver(InboxChannel::class)->send($user, notificationOf(TestNotificationType::Invited));
+
+    app()->forgetScopedInstances();
+
+    storePreference($user, TestNotificationType::Invited, CoreChannel::Live, false);
+
+    $manager->driver(InboxChannel::class)->send($user, notificationOf(TestNotificationType::Invited));
+
+    $announced = [];
+
+    Event::assertDispatched(NotificationBroadcasted::class, function ($event) use (&$announced) {
+        $announced[] = $event->notification->announce;
+
+        return true;
+    });
+
+    expect($announced)->toBe([true, false]);
 });
