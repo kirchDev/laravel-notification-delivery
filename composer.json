@@ -40,7 +40,7 @@
     "spatie/laravel-package-tools": "^1.93.1"
   },
   "require-dev": {
-    "kirchdev/laravel-device-sessions": "^0.2",
+    "kirchdev/laravel-device-sessions": "^0.2 || ^0.6",
     "larastan/larastan": "^3.9",
     "laravel/pint": "^1.29",
     "orchestra/testbench": "^11.0",
