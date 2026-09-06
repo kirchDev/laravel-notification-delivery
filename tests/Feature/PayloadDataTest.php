@@ -148,3 +148,17 @@ it('identifies a notifiable that has no key by the object itself', function () {
         ->and(NotificationDelivery::morphKeyFor(new stdClass))->toBeNull()
         ->and(NotificationDelivery::morphTypeFor(new stdClass))->toBe(stdClass::class);
 });
+
+it('keeps a locked channel that an explicit list forgot to repeat', function () {
+    // `available` names what the type offers on top of what it locks. A definition that could
+    // drop a locked channel would drop the inbox row — the one delivery `locked` exists to
+    // guarantee — and `isLocked()` would still cheerfully answer true for it.
+    $definition = new NotificationDefinition(
+        locked: [CoreChannel::Inbox],
+        available: [CoreChannel::Mail],
+    );
+
+    expect($definition->channels())->toBe([CoreChannel::Inbox, CoreChannel::Mail])
+        ->and($definition->knows(CoreChannel::Inbox))->toBeTrue()
+        ->and($definition->isDefault(CoreChannel::Mail))->toBeFalse();
+});
