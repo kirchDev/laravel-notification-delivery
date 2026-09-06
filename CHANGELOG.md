@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.1](https://github.com/kirchDev/laravel-notification-delivery/compare/v0.1.0...v0.1.1) (2026-09-06)
+
+
+### Bug Fixes
+
+* **gates:** keep a locked channel an explicit available list omits ([e70612c](https://github.com/kirchDev/laravel-notification-delivery/commit/e70612cd0ddfa208111145dd341b4254c4736128))
+* **gates:** memoise the delivery decision across the notification's clones ([02354da](https://github.com/kirchDev/laravel-notification-delivery/commit/02354daf6afb3badb06450177af8c368a0004a6a))
+* **inbox:** resolve the inbox channel's collaborators per send ([d878d79](https://github.com/kirchDev/laravel-notification-delivery/commit/d878d79b31d0764893a4ab85715437ccf3f290c4))
+* **models:** store a renamed morph key column ([4ae9668](https://github.com/kirchDev/laravel-notification-delivery/commit/4ae9668e130f48957314d12db6224ce128257655))
+
+
+### Documentation
+
+* **agents:** correct the notes the delivery fixes invalidated ([98486d1](https://github.com/kirchDev/laravel-notification-delivery/commit/98486d1ed761c1bbbb132a6a839af1325f2fe5b4))
+
 ## 0.1.0 (2026-09-06)
 
 
