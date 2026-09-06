@@ -1,7 +1,8 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 
-# The checks come from this repo's own `check` script in package.json — adding
-# one there is enough, no workflow change needed.
+# Two bodies: the Node gate from package.json's `check`, and the PHP suite the
+# package actually ships. The support matrix is the one thing neither body can
+# read from the repo, so it is the only input.
 name: CI
 
 on:
@@ -11,16 +12,32 @@ on:
       - dev
     types: [opened, synchronize, reopened, ready_for_review]
 
+# PERMISSIONS PER JOB, NOT PER WORKFLOW. A workflow-level block caps every
+# called body: `_ci-laravel.yml` needs `pull-requests: write` for its coverage
+# comment, and a caller holding only `contents: read` makes the whole run fail
+# at startup rather than at that step.
+
 # NO `paths-ignore`, AND THAT IS THE POINT OF THE GATE. A change touching only
 # prose cannot break a lint — but a workflow that does not TRIGGER reports no
 # check at all, and a required check that never reports does not pass the merge,
 # it blocks it forever. `CI / Gate` is meant to be a required check, so this
 # workflow has to run on every pull request, including a README-only one.
 
-permissions:
-  contents: read
-
 jobs:
   check:
     name: CI
-    uses: kirchDev/workflows/.github/workflows/_ci-check.yml@7fd4eaf529500fcd07c527ae70c839ab9ac7d76f # v0.7.0
+    permissions:
+      contents: read
+    uses: kirchDev/workflows/.github/workflows/_ci-check.yml@94cbcbd676b989ac6c6327055a240132f5cd76a5 # v0.8.0
+
+  php:
+    name: PHP
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: kirchDev/workflows/.github/workflows/_ci-laravel.yml@94cbcbd676b989ac6c6327055a240132f5cd76a5 # v0.8.0
+    with:
+      php-versions: '["8.4", "8.5"]'
+      laravel-versions: '["13.*"]'
+      illuminate-packages: '["bus", "console", "contracts", "database", "events", "notifications", "queue", "support"]'
+      postgres-database: notification_delivery_test

@@ -1,5 +1,5 @@
 # region gitignore-sync
-# stacks: core, git, node, vscode, intellij, macos, windows, linux, agents
+# stacks: core, git, node, php, vscode, intellij, macos, windows, linux, agents
 # ─────────────────────────────────────────
 
 # region core@v1
@@ -29,6 +29,13 @@ coverage
 .eslintcache
 .npm
 *.tgz
+# endregion
+
+# region php@v1
+/vendor
+/.phpunit.cache
+/.phpunit.result.cache
+/composer.lock
 # endregion
 
 # region vscode@v1

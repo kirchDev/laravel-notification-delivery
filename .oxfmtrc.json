@@ -6,6 +6,7 @@
   "printWidth": 80,
   "trailingComma": "none",
   "ignorePatterns": [
+    "**/vendor/**",
     "**/node_modules/**",
     "CHANGELOG.md",
     "pnpm-lock.yaml",

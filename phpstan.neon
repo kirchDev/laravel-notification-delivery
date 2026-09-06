@@ -1,0 +1,12 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 7
+    paths:
+        - src
+        - database/migrations
+        - tests/Fixtures
+    parallel:
+        maximumNumberOfProcesses: 1
+    treatPhpDocTypesAsCertain: false
