@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace KirchDev\NotificationDelivery\Notifications;
 
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Str;
 use KirchDev\NotificationDelivery\Contracts\Channel;
 use KirchDev\NotificationDelivery\Contracts\NotificationType;
 use KirchDev\NotificationDelivery\Jobs\DeliverDeferredNotification;
@@ -21,6 +22,14 @@ use KirchDev\NotificationDelivery\Support\PayloadData;
  */
 abstract class TypedNotification extends Notification
 {
+    /**
+     * This notification's identity for the gate chain's memo, assigned on first use.
+     *
+     * Not Laravel's own $id: that one is stamped per notifiable, after via() has already run, and
+     * a notification sent to a hundred recipients carries a hundred of them.
+     */
+    private ?string $deliveryToken = null;
+
     /**
      * The stable key this notification is stored and configured under.
      */
@@ -54,6 +63,20 @@ abstract class TypedNotification extends Notification
     public function deliveryDecision(object $notifiable): DeliveryDecision
     {
         return app(DeliveryResolver::class)->decide($notifiable, $this);
+    }
+
+    /**
+     * What the gate chain memoises its verdict under.
+     *
+     * It has to be a value rather than the object's own identity, because Laravel never hands the
+     * same object to both call sites: NotificationSender clones the notification once for the
+     * send and again for every channel, so via() and InboxChannel see three different objects of
+     * one notification. A property survives all of that — clone copies it — while spl_object_id
+     * and a WeakMap key do not.
+     */
+    public function deliveryToken(): string
+    {
+        return $this->deliveryToken ??= (string) Str::uuid();
     }
 
     private function scheduleDeferred(object $notifiable, DeliveryDecision $decision): void

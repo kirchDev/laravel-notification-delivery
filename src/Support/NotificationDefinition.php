@@ -18,10 +18,13 @@ class NotificationDefinition
     /**
      * @param  list<Channel>  $default  On unless the recipient says otherwise.
      * @param  list<Channel>  $locked  Always on; gates 3 and 4 are skipped for these.
-     * @param  list<Channel>|null  $available  Every channel this type knows. Null means
-     *                                         "default plus locked" — the usual case. Name it
-     *                                         explicitly to offer a channel that is off by
-     *                                         default but switchable on.
+     * @param  list<Channel>|null  $available  Which channels this type offers beyond its locked
+     *                                         ones. Null means "the defaults" — the usual case.
+     *                                         Name it explicitly to offer a channel that is off
+     *                                         by default but switchable on. Locked channels are
+     *                                         always known, listed here or not: a list that could
+     *                                         omit one would drop the notification it exists to
+     *                                         guarantee.
      * @param  bool  $broadcast  False switches off the NotificationBroadcasted fan-out for a
      *                           bulk send that must not produce ten thousand WebSocket events.
      *                           A property of the type, never of a recipient's preference.
@@ -40,7 +43,7 @@ class NotificationDefinition
      */
     public function channels(): array
     {
-        $channels = $this->available ?? [...$this->locked, ...$this->default];
+        $channels = [...$this->locked, ...($this->available ?? $this->default)];
 
         $unique = [];
 

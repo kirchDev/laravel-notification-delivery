@@ -18,19 +18,21 @@ use WeakMap;
  *   3. Has the recipient switched it off? No row means undecided, not off.   (package)
  *   4. Does the SuppressionPolicy say this is a bad moment?                  (application)
  *
- * Bound scoped, and the result memoised per (notification, notifiable) pair: via() asks for the
- * immediate channels and InboxChannel then asks the same object whether `live` survived. Running
- * the chain twice would be wasteful, and — with a policy that reads the clock — could disagree
- * with itself between the two calls.
+ * Bound scoped, and the result memoised per (notifiable, notification) pair: via() asks for the
+ * immediate channels and InboxChannel then asks whether `live` survived. Running the chain twice
+ * would be wasteful, and — with a policy that reads the clock — could disagree with itself
+ * between the two calls.
  *
- * The memo is a WeakMap rather than an array keyed by object id, because an object id is reused
- * once its object is collected, and a long-running worker sending thousands of notifications
- * would eventually answer one notification's question with another's decision.
+ * The notifiable is a WeakMap key rather than an object id, because an object id is reused once
+ * its object is collected, and a long-running worker sending thousands of notifications would
+ * eventually answer one recipient's question with another's decision. The notification cannot be
+ * a key at all: NotificationSender clones it for the send and again for every channel, so the two
+ * call sites never hold the same object. Its own token identifies it across those clones.
  */
 final class DeliveryResolver
 {
     /**
-     * @var WeakMap<TypedNotification, WeakMap<object, DeliveryDecision>>
+     * @var WeakMap<object, array<string, DeliveryDecision>>
      */
     private WeakMap $cache;
 
@@ -43,9 +45,18 @@ final class DeliveryResolver
 
     public function decide(object $notifiable, TypedNotification $notification): DeliveryDecision
     {
-        $perNotifiable = $this->cache[$notification] ??= new WeakMap;
+        $token = $notification->deliveryToken();
 
-        return $perNotifiable[$notifiable] ??= $this->run($notifiable, $notification);
+        /** @var array<string, DeliveryDecision> $decisions */
+        $decisions = $this->cache[$notifiable] ?? [];
+
+        if (! isset($decisions[$token])) {
+            $decisions[$token] = $this->run($notifiable, $notification);
+
+            $this->cache[$notifiable] = $decisions;
+        }
+
+        return $decisions[$token];
     }
 
     private function run(object $notifiable, TypedNotification $notification): DeliveryDecision

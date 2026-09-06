@@ -59,16 +59,23 @@ class DeliveredNotification extends Model
     }
 
     /**
-     * The morph key column is configurable, so a renamed one has to be let through by name
-     * rather than by the literal in $fillable.
+     * The morph key column is configurable, so a renamed one has to be added to the fillable list
+     * itself — not merely waved through by isFillable().
+     *
+     * fill() runs fillableFromArray() first, which intersects the incoming attributes with
+     * getFillable(); a renamed key is dropped there and isFillable() is never consulted for it.
+     * An override on that method would therefore only ever answer for the default column, which
+     * already sits in $fillable literally.
+     *
+     * @return list<string>
      */
-    public function isFillable($key): bool
+    public function getFillable(): array
     {
-        if ($key === NotificationDelivery::morphKey()) {
-            return true;
-        }
+        /** @var list<string> $fillable */
+        $fillable = parent::getFillable();
+        $morphKey = NotificationDelivery::morphKey();
 
-        return parent::isFillable($key);
+        return in_array($morphKey, $fillable, true) ? $fillable : [...$fillable, $morphKey];
     }
 
     /**

@@ -43,7 +43,8 @@ enum OrganisationNotification: string implements NotificationType
 }
 ```
 
-- `locked` is the inbox, and effectively only the inbox: it skips gates 3 and 4 entirely.
+- `locked` is the inbox, and effectively only the inbox: it skips gates 3 and 4 entirely. It is
+  always known, whether or not an explicit `available` list repeats it.
 - `default` is on unless the recipient says otherwise. `available` widens the set beyond that —
   a channel a recipient can switch **on** that ships off.
 - `broadcast: false` switches off the WebSocket fan-out for a bulk send that must not produce ten
