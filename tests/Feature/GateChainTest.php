@@ -5,8 +5,10 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Notification as NotificationFacade;
 use KirchDev\NotificationDelivery\Channels\InboxChannel;
 use KirchDev\NotificationDelivery\Channels\LiveChannel;
+use KirchDev\NotificationDelivery\Contracts\SuppressionPolicy;
 use KirchDev\NotificationDelivery\Enums\CoreChannel;
 use KirchDev\NotificationDelivery\Support\DeliveryResolver;
+use KirchDev\NotificationDelivery\Tests\Fixtures\CountingSuppression;
 use KirchDev\NotificationDelivery\Tests\Fixtures\Notification\ExtraChannel;
 use KirchDev\NotificationDelivery\Tests\Fixtures\Notification\PushOnlyType;
 use KirchDev\NotificationDelivery\Tests\Fixtures\Notification\TestGroup;
@@ -153,4 +155,19 @@ it('sends everything for a type that names no channels at all', function () {
     $decision = app(DeliveryResolver::class)->decide(makeUser(), notificationOf(TestNotificationType::Removed));
 
     expect($decision->laravelChannels())->toBe([InboxChannel::class]);
+});
+
+it('runs the chain once per send, across every clone Laravel makes of the notification', function () {
+    $user = makeUser();
+
+    $policy = new CountingSuppression;
+    app()->instance(SuppressionPolicy::class, $policy);
+    app()->forgetInstance(DeliveryResolver::class);
+
+    NotificationFacade::send([$user], notificationOf(TestNotificationType::Invited));
+
+    // NotificationSender clones the notification for the send and again for every channel, so
+    // via() and InboxChannel never hold the same object. Memoising on object identity therefore
+    // memoises nothing, and a clock-reading policy gets two chances to disagree with itself.
+    expect($policy->calls)->toBe(1);
 });
