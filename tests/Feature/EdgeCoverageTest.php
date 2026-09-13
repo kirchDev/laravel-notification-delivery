@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use KirchDev\NotificationDelivery\Enums\CoreChannel;
 use KirchDev\NotificationDelivery\Events\NotificationBroadcasted;
+use KirchDev\NotificationDelivery\Events\NotificationRead;
 use KirchDev\NotificationDelivery\Models\DeliveredNotification;
 use KirchDev\NotificationDelivery\Models\NotificationPreference;
 use KirchDev\NotificationDelivery\Support\DeliveryDecision;
@@ -22,6 +23,13 @@ it('names a channel for a notifiable with no key at all', function () {
     $event = new NotificationBroadcasted(new stdClass, notificationOf()->payload(new stdClass));
 
     expect($event->broadcastOn()[0]->name)->toBe('private-stdClass.');
+});
+
+it('routes a read to the channel a recipient names for itself', function () {
+    $user = BroadcastRoutingUser::create(['name' => 'B', 'email' => 'b@example.com']);
+
+    expect((new NotificationRead($user, null, 0))->broadcastOn()[0]->name)->toBe('private-inbox.'.$user->getKey())
+        ->and((new NotificationRead(new stdClass, null, 0))->broadcastOn()[0]->name)->toBe('private-stdClass.');
 });
 
 it('reads the notifiable back off a preference row', function () {

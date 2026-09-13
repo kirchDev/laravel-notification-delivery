@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace KirchDev\NotificationDelivery\Events;
 
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use KirchDev\NotificationDelivery\Concerns\BroadcastsToNotifiable;
 use KirchDev\NotificationDelivery\Support\PayloadData;
 
 /**
@@ -22,6 +20,7 @@ use KirchDev\NotificationDelivery\Support\PayloadData;
  */
 class NotificationBroadcasted implements ShouldBroadcast
 {
+    use BroadcastsToNotifiable;
     use Dispatchable;
     use InteractsWithSockets;
     use SerializesModels;
@@ -30,14 +29,6 @@ class NotificationBroadcasted implements ShouldBroadcast
         public readonly object $notifiable,
         public readonly PayloadData $notification,
     ) {}
-
-    /**
-     * @return array<int, Channel>
-     */
-    public function broadcastOn(): array
-    {
-        return [new PrivateChannel($this->channelName())];
-    }
 
     /**
      * @return array<string, mixed>
@@ -54,23 +45,5 @@ class NotificationBroadcasted implements ShouldBroadcast
     public function broadcastAs(): string
     {
         return 'NotificationBroadcasted';
-    }
-
-    /**
-     * Laravel's own convention, so an application already broadcasting notifications keeps its
-     * channel authorisation: `App.Models.User.1`, or whatever the notifiable answers from
-     * receivesBroadcastNotificationsOn().
-     */
-    private function channelName(): string
-    {
-        $notifiable = $this->notifiable;
-
-        if (method_exists($notifiable, 'receivesBroadcastNotificationsOn')) {
-            return (string) $notifiable->receivesBroadcastNotificationsOn();
-        }
-
-        $key = $notifiable instanceof Model ? $notifiable->getKey() : null;
-
-        return str_replace('\\', '.', $notifiable::class).'.'.(is_scalar($key) ? $key : '');
     }
 }
