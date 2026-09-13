@@ -111,6 +111,10 @@ class DeliveredNotification extends Model
     /**
      * Stamp the row as read. Idempotent: re-reading something does not move the timestamp, which
      * matters because the deferred-delivery rule keys off "was it read", not "when".
+     *
+     * Raw persistence: this fires no NotificationRead, so an open tab's badge does not hear about
+     * it. Go through MarkNotificationAsRead when a recipient reads something; a direct call here
+     * is a deliberate bypass.
      */
     public function markAsRead(): bool
     {

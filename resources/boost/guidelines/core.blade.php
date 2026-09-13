@@ -82,3 +82,8 @@ delay expires and either delivers or discards.
   `kirchdev/laravel-device-sessions` is installed. Do not extend the shipped classes.
 - Listen for `KirchDev\NotificationDelivery\Events\NotificationBroadcasted` rather than reaching
   into the channel. One event carries both the data sync and, via `announce`, the interruption.
+- Listen for `KirchDev\NotificationDelivery\Events\NotificationRead` to keep other open tabs'
+  badges current. It carries `publicId` (null after a mark-all) and the new `unreadCount`, and is
+  fired only by `MarkNotificationAsRead` and `MarkAllNotificationsAsRead` when a row moved. Mark
+  notifications read through those actions, never `DeliveredNotification::markAsRead()`, which
+  fires nothing.

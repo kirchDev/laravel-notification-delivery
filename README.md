@@ -179,7 +179,19 @@ Event::listen(function (NotificationBroadcasted $event) {
 });
 ```
 
-It broadcasts on Laravel's own private channel convention (`App.Models.User.1`, or whatever the recipient answers from `receivesBroadcastNotificationsOn()`), so an application already broadcasting notifications keeps its channel authorisation.
+`MarkNotificationAsRead` and `MarkAllNotificationsAsRead` fire `NotificationRead` whenever a row actually moved, so every other open tab can correct its badge:
+
+```php
+Event::listen(function (NotificationRead $event) {
+    $event->publicId;     // the row that was read — null after a mark-all
+    $event->unreadCount;  // the recipient's unread count after the read
+});
+```
+
+Both broadcast on Laravel's own private channel convention (`App.Models.User.1`, or whatever the recipient answers from `receivesBroadcastNotificationsOn()`), so an application already broadcasting notifications keeps its channel authorisation.
+
+> [!NOTE]
+> `DeliveredNotification::markAsRead()` is raw persistence and fires nothing — go through the actions. A type's `broadcast: false` does not silence `NotificationRead`, since the unread count spans every type.
 
 <details>
 <summary>Why <code>live</code> is one flag on one event, and not a second broadcast</summary>
