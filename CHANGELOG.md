@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.2.0](https://github.com/kirchDev/laravel-notification-delivery/compare/v0.1.1...v0.2.0) (2026-09-13)
+
+
+### Features
+
+* **events:** dispatch NotificationRead when a notification is marked as read ([f40a025](https://github.com/kirchDev/laravel-notification-delivery/commit/f40a02583653446e019b211bd879314315632716)), closes [#7](https://github.com/kirchDev/laravel-notification-delivery/issues/7)
+
+
+### Bug Fixes
+
+* **config:** correct the codex policy match examples ([a536141](https://github.com/kirchDev/laravel-notification-delivery/commit/a53614159f29afc8a3f2e289c278b8ebf7d0bcef))
+
+
+### Documentation
+
+* reconcile the docs tree to the duxt page contract ([acda3b4](https://github.com/kirchDev/laravel-notification-delivery/commit/acda3b4d207303fa1fac811d31ec73cc5241f6c4)), closes [#9](https://github.com/kirchDev/laravel-notification-delivery/issues/9)
+
+
+### Refactor
+
+* **events:** share the recipient channel through a trait ([56c692e](https://github.com/kirchDev/laravel-notification-delivery/commit/56c692e425e85a66a6bc3bc7e86d841ea2c7dca3)), closes [#7](https://github.com/kirchDev/laravel-notification-delivery/issues/7)
+
 ## [0.1.1](https://github.com/kirchDev/laravel-notification-delivery/compare/v0.1.0...v0.1.1) (2026-09-06)
 
 
