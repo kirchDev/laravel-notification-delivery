@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Notification as NotificationFacade;
+use KirchDev\NotificationDelivery\Enums\ChannelPreference;
 use KirchDev\NotificationDelivery\Enums\CoreChannel;
 use KirchDev\NotificationDelivery\Models\DeliveredNotification;
 use KirchDev\NotificationDelivery\Tests\Fixtures\Notification\TestNotificationType;
@@ -35,7 +36,7 @@ it('exposes the unread ones and their count', function () {
 
 it('exposes the recipient s preferences', function () {
     $user = makeUser();
-    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, false);
+    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, ChannelPreference::Off);
 
     expect($user->notificationPreferences()->pluck('channel')->all())->toBe(['mail']);
 });

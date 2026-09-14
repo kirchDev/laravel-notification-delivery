@@ -48,7 +48,7 @@ Per notification and channel, in order; each gate can stop the chain.
 3. Has the recipient switched it off? **No row means undecided, not off** — it falls back to the
    type's default, which is what lets a new type ship without a backfill.
 4. Does the `SuppressionPolicy` say this is a bad moment? Only channels whose `isQuietable()` is
-   true are asked.
+   true are asked, and never one whose resolved preference is `ChannelPreference::Always`.
 
 `via()` cannot wait: it is evaluated once, synchronously. A policy that defers therefore drops the
 channel from `via()` and schedules `DeliverDeferredNotification` instead, which re-checks gates 1–3
@@ -61,8 +61,17 @@ when the delay expires — not the policy again — and delivers if the notifica
   `ListNotificationPreferences`, `UpdateNotificationPreference`.
 - Every action takes the recipient first and scopes to their rows, so an id coming from a request
   cannot reach somebody else's notification.
-- `UpdateNotificationPreference` takes `null` to **clear** a preference, which is not the same as
-  `false`. False is off; null puts the recipient back on the type's default.
+- `UpdateNotificationPreference` takes a `KirchDev\NotificationDelivery\Enums\ChannelPreference`: a
+  quietable channel accepts `Off`, `WhenAway` or `Always` (skips the `SuppressionPolicy`), any other
+  channel `Off` or `On`; anything else throws `InvalidArgumentException`. Offer the options from
+  `ChannelPreference::acceptedBy($channel)` or the listing row's `quietable`, never hard-coded.
+- It takes `null` to **clear** a preference, which is not the same as `Off`. Off is off; null puts
+  the recipient back on the type's default.
+- `ListNotificationPreferences` rows carry `preference` (`off` / `on` / `when_away` / `always`) and
+  `quietable` — there is no `enabled` key.
+- A preference resolves **row-wise**: the one row that says whether a channel is on also says whether
+  it bypasses suppression. A type row set to `WhenAway` puts mail back under the policy even when its
+  group row says `Always`.
 - Stored notifications are removed by `notification-delivery:prune`, which ships **unscheduled**
   and, by default, **never deletes anything** — both retention windows start at `null`.
 

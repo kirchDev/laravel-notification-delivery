@@ -134,7 +134,7 @@ $inbox  = app(ListNotifications::class)->execute($user, limit: 20);
 $unread = app(CountUnreadNotifications::class)->execute($user);
 
 app(MarkNotificationAsRead::class)->execute($user, $id);  // scoped to $user — an id from a request cannot reach another inbox
-app(UpdateNotificationPreference::class)->execute($user, $type, CoreChannel::Mail, false);
+app(UpdateNotificationPreference::class)->execute($user, $type, CoreChannel::Mail, ChannelPreference::Always);
 ```
 
 A preference resolves three tiers deep, and **you decide which of them your UI offers**:
@@ -145,8 +145,10 @@ A preference resolves three tiers deep, and **you decide which of them your UI o
 3. definition()->default                   → otherwise
 ```
 
+A preference is a `ChannelPreference`: a quietable channel takes `Off`, `WhenAway` or `Always` — the last one skips the `SuppressionPolicy` — and any other channel takes `Off` or `On`. A type can make `Always` a channel's default with `always:` on its definition; a stored row still wins over it.
+
 > [!TIP]
-> Passing `null` instead of `false` **clears** a preference rather than switching it off — it puts the recipient back on the type's default, and is what a "reset" button wants.
+> Passing `null` instead of `ChannelPreference::Off` **clears** a preference rather than switching it off — it puts the recipient back on the type's default, and is what a "reset" button wants.
 
 <details>
 <summary>The full action set, and why storage stays sparse</summary>
@@ -255,7 +257,7 @@ Then list it in `notification-delivery.channels.enums`.
 | Table                      | Holds                                                                  |
 | :------------------------- | :--------------------------------------------------------------------- |
 | `delivered_notifications`  | `notifiable_type`, morph key, `type`, `payload`, `read_at`, timestamps |
-| `notification_preferences` | notifiable morph, `type`, `channel`, `enabled`                         |
+| `notification_preferences` | notifiable morph, `type`, `channel`, `enabled`, `bypass_suppression`   |
 
 <details>
 <summary>Three schema decisions worth knowing before you extend it</summary>

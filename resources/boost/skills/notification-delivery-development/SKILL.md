@@ -47,6 +47,9 @@ enum OrganisationNotification: string implements NotificationType
   always known, whether or not an explicit `available` list repeats it.
 - `default` is on unless the recipient says otherwise. `available` widens the set beyond that —
   a channel a recipient can switch **on** that ships off.
+- `always` is on **and** skips the `SuppressionPolicy` unless the recipient says otherwise — a
+  security alert that should not wait until the recipient is away. Unlike `locked`, a stored type or
+  group row still wins over it.
 - `broadcast: false` switches off the WebSocket fan-out for a bulk send that must not produce ten
   thousand events. A property of the type, never of a recipient's choice.
 - Carrying more per type? Return a subclass of `NotificationDefinition` — covariant return types
@@ -112,15 +115,36 @@ choose.
 ```
 1. row for (notifiable, type, channel)      → wins
 2. row for (notifiable, group:…, channel)   → otherwise
-3. definition()->default                    → otherwise
+3. definition()->default / ->always         → otherwise
 ```
 
 **The application decides which tier its UI offers.** Group-level is enough to start with — thirty
 individual switches are not a settings page anyone reads — and refining later costs a UI row and no
 migration, because the `type` column already carries either key.
 
+A preference is a `ChannelPreference`, and what a channel accepts follows from `isQuietable()`:
+
+| Channel       | Accepts                     |
+| :------------ | :-------------------------- |
+| quietable     | `Off`, `WhenAway`, `Always` |
+| not quietable | `Off`, `On`                 |
+
+`Always` skips gate 4 — "always email me about this, even while I'm online". Anything else throws
+`InvalidArgumentException`; render the choices from the listing row's `quietable` (or
+`ChannelPreference::acceptedBy()`). The row stores `enabled` plus a nullable `bypass_suppression`,
+and they resolve **together**: a type row saying `WhenAway` beats a group row saying `Always`
+completely.
+
+```php
+app(UpdateNotificationPreference::class)
+    ->execute($user, OrganisationNotification::MemberInvited, CoreChannel::Mail, ChannelPreference::Always);
+```
+
+`ListNotificationPreferences` rows carry `preference` (`off` / `on` / `when_away` / `always`),
+`locked`, `configurable`, `quietable` and `source`.
+
 Only deviations are stored. `UpdateNotificationPreference` takes `null` to delete the row, and that
-is the operation a "reset to default" button wants; `false` means off and keeps the recipient there
+is the operation a "reset to default" button wants; `Off` means off and keeps the recipient there
 when the type's default changes.
 
 ## Gate 4: when to hold a mail back
@@ -134,6 +158,9 @@ rules with no escalation logic at all**: the inbox is locked and always runs, `l
 and the open tab decides whether a toast appears, and a deferred mail is discarded as soon as
 `read_at` is set. Whoever saw the toast has read it; whoever was away has not. The "was online" is
 already inside "if unread" — which is why it works with no presence tracking whatsoever.
+
+The policy is never asked about a channel whose resolved preference is `Always`. Do not build an
+"always notify me" exemption into a policy — that is a preference, and it belongs on the row.
 
 A policy that defers returns `SuppressionDecision::defer($seconds)`. The channel then leaves `via()`
 and `DeliverDeferredNotification` re-checks when the delay expires, delivering through `sendNow()`

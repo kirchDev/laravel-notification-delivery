@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use KirchDev\NotificationDelivery\Enums\ChannelPreference;
 use KirchDev\NotificationDelivery\Enums\CoreChannel;
 use KirchDev\NotificationDelivery\Events\NotificationBroadcasted;
 use KirchDev\NotificationDelivery\Events\NotificationRead;
@@ -34,7 +35,7 @@ it('routes a read to the channel a recipient names for itself', function () {
 
 it('reads the notifiable back off a preference row', function () {
     $user = makeUser();
-    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, false);
+    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, ChannelPreference::Off);
 
     expect(NotificationPreference::query()->sole()->notifiable()->first()?->getKey())->toBe($user->getKey());
 });
@@ -43,8 +44,8 @@ it('scopes preferences to one recipient', function () {
     $user = makeUser();
     $other = makeUser('other@example.com');
 
-    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, false);
-    storePreference($other, TestNotificationType::Invited, CoreChannel::Live, false);
+    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, ChannelPreference::Off);
+    storePreference($other, TestNotificationType::Invited, CoreChannel::Live, ChannelPreference::Off);
 
     expect(NotificationPreference::query()->forNotifiable($user)->pluck('channel')->all())->toBe(['mail']);
 });

@@ -165,19 +165,19 @@ it('offers every package migration under the publish tag', function () {
     expect($sources)->toBe([
         '0001_01_01_000001_create_delivered_notifications_table.php',
         '0001_01_01_000002_create_notification_preferences_table.php',
+        '0001_01_01_000003_add_bypass_suppression_to_notification_preferences_table.php',
     ]);
 
     foreach ($published as $source => $target) {
         expect(is_file($source))->toBeTrue()
             ->and(dirname(normalisePath($target)))->toBe(database_path('migrations'))
-            ->and(basename($target))->toMatch('/^\d{4}_\d{2}_\d{2}_\d{6}_create_\w+_table\.php$/');
+            ->and(basename($target))->toMatch('/^\d{4}_\d{2}_\d{2}_\d{6}_\w+_table\.php$/');
     }
 });
 
 it('publishes the migrations in the order the sources prescribe', function () {
-    // Neither table carries a foreign key into the other today, so the order costs nothing yet —
-    // and that is exactly why it has to be pinned now rather than discovered later, when a third
-    // migration alters one of them and lands under a timestamp that sorts before it.
+    // The third migration alters the preferences table, so it has to land behind the one that
+    // creates it — a timestamp that sorted before it would fail against a table not there yet.
     $targets = array_map(static fn (string $path): string => basename($path), array_values(publishedMigrations()));
 
     sort($targets);
@@ -185,6 +185,7 @@ it('publishes the migrations in the order the sources prescribe', function () {
     expect(array_map('publishedMigrationName', $targets))->toBe([
         'create_delivered_notifications_table.php',
         'create_notification_preferences_table.php',
+        'add_bypass_suppression_to_notification_preferences_table.php',
     ]);
 });
 
@@ -194,7 +195,7 @@ it('names every source migration with a timestamp prefix the publish strips', fu
     // the package path, where an unprefixed name would run before the migrations beside it.
     // The date is Laravel's own sentinel: it orders, it does not claim a day.
     foreach (packageMigrationSources() as $source) {
-        expect(basename($source))->toMatch('/^0001_01_01_\d{6}_create_\w+_table\.php$/');
+        expect(basename($source))->toMatch('/^0001_01_01_\d{6}_\w+_table\.php$/');
     }
 });
 

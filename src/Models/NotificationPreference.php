@@ -20,9 +20,13 @@ use KirchDev\NotificationDelivery\NotificationDelivery;
  * `type` carries either a type key ('organisation.member.invited') or a group key
  * ('group:organisation'). One prefix, not a second schema.
  *
+ * `enabled` and `bypass_suppression` are one answer read together: the row that decides whether a
+ * channel is on also decides whether gate 4 is skipped for it. See ChannelPreference.
+ *
  * @property string $type
  * @property string $channel
  * @property bool $enabled
+ * @property bool|null $bypass_suppression
  */
 class NotificationPreference extends Model
 {
@@ -38,6 +42,7 @@ class NotificationPreference extends Model
         'type',
         'channel',
         'enabled',
+        'bypass_suppression',
     ];
 
     /**
@@ -47,6 +52,7 @@ class NotificationPreference extends Model
     {
         return [
             'enabled' => 'boolean',
+            'bypass_suppression' => 'boolean',
         ];
     }
 

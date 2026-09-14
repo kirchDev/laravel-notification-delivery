@@ -6,6 +6,7 @@ use KirchDev\NotificationDelivery\Actions\UpdateNotificationPreference;
 use KirchDev\NotificationDelivery\Contracts\Channel;
 use KirchDev\NotificationDelivery\Contracts\NotificationGroup;
 use KirchDev\NotificationDelivery\Contracts\NotificationType;
+use KirchDev\NotificationDelivery\Enums\ChannelPreference;
 use KirchDev\NotificationDelivery\Support\PreferenceResolver;
 use KirchDev\NotificationDelivery\Tests\Fixtures\Notification\TestNotificationType;
 use KirchDev\NotificationDelivery\Tests\Fixtures\TestNotification;
@@ -39,10 +40,10 @@ function storePreference(
     object $notifiable,
     NotificationType|NotificationGroup $target,
     Channel $channel,
-    ?bool $enabled,
+    ?ChannelPreference $preference,
 ): void {
     app(UpdateNotificationPreference::class)
-        ->execute($notifiable, $target, $channel, $enabled);
+        ->execute($notifiable, $target, $channel, $preference);
 }
 
 function forgetPreferences(object $notifiable): void
