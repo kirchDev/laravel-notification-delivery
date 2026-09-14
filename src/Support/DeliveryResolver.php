@@ -124,8 +124,13 @@ final class DeliveryResolver
     }
 
     /**
-     * Run the chain for a single channel without the memo — what the deferred job re-checks with
+     * Run gates 1–3 for a single channel without the memo — what the deferred job re-checks with
      * when its delay expires.
+     *
+     * Gate 4 is deliberately not asked again. The hold already was the SuppressionPolicy's
+     * verdict; asking a second time would let a recipient who stays present past the delay be
+     * deferred again, and a second deferral has nowhere to go but a discard. What can still have
+     * changed — the channel becoming unavailable, the recipient switching it off — is gates 1–3.
      */
     public function decideChannel(object $notifiable, NotificationType $type, Channel $channel): SuppressionDecision
     {
@@ -145,10 +150,6 @@ final class DeliveryResolver
             return SuppressionDecision::drop();
         }
 
-        if (! $channel->isQuietable()) {
-            return SuppressionDecision::send();
-        }
-
-        return $this->suppression->decide($notifiable, $type, $channel);
+        return SuppressionDecision::send();
     }
 }

@@ -51,8 +51,8 @@ Per notification and channel, in order; each gate can stop the chain.
    true are asked.
 
 `via()` cannot wait: it is evaluated once, synchronously. A policy that defers therefore drops the
-channel from `via()` and schedules `DeliverDeferredNotification` instead, which re-checks when the
-delay expires and either delivers or discards.
+channel from `via()` and schedules `DeliverDeferredNotification` instead, which re-checks gates 1–3
+when the delay expires — not the policy again — and delivers if the notification is still unread.
 
 ## Managing the inbox
 - The package ships **no routes and no controllers**. Every operation is a plain action under

@@ -137,8 +137,10 @@ already inside "if unread" — which is why it works with no presence tracking w
 
 A policy that defers returns `SuppressionDecision::defer($seconds)`. The channel then leaves `via()`
 and `DeliverDeferredNotification` re-checks when the delay expires, delivering through `sendNow()`
-with an explicit channel list so no second inbox row appears. It defers **once**: a second deferral
-is a discard, or a policy that always defers would hold a notification forever.
+with an explicit channel list so no second inbox row appears. It does **not** ask the policy again:
+the hold was the policy's verdict, so the job runs gates 1–3 and `if_unread` only — unread is
+delivered, read is discarded, a channel switched off meanwhile is discarded. A policy cannot drop or
+re-defer a channel it already held.
 
 ## Recipients and translation
 

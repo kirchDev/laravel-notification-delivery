@@ -104,18 +104,30 @@ it('delivers when an unread notification of the same type is the newest one', fu
     NotificationFacade::assertSentTo($user, $notification::class);
 });
 
-it('discards rather than deferring a second time', function () {
+it('delivers an unread held-back channel even while the policy would defer it again', function () {
     NotificationFacade::fake();
     app()->instance(SuppressionPolicy::class, new DeferMail);
 
     $user = makeUser();
 
-    // A policy that always defers would otherwise hold a notification forever, one delay at a
-    // time. One hold, then a verdict.
+    // The hold already was gate 4's verdict. A recipient who stays present past the delay would
+    // otherwise be deferred a second time — and a second deferral used to be a discard.
     (new DeliverDeferredNotification($user, notificationOf(), CoreChannel::Mail))
         ->handle(app(DeliveryResolver::class));
 
-    NotificationFacade::assertNothingSent();
+    NotificationFacade::assertSentTo($user, TestNotification::class);
+});
+
+it('never lets the policy drop a held-back channel on the second pass', function () {
+    NotificationFacade::fake();
+    app()->instance(SuppressionPolicy::class, new DropEverything);
+
+    $user = makeUser();
+
+    (new DeliverDeferredNotification($user, notificationOf(), CoreChannel::Mail))
+        ->handle(app(DeliveryResolver::class));
+
+    NotificationFacade::assertSentTo($user, TestNotification::class);
 });
 
 it('discards a held-back channel the recipient switched off in the meantime', function () {
