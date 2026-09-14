@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.3.0](https://github.com/kirchDev/laravel-notification-delivery/compare/v0.2.0...v0.3.0) (2026-09-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **preferences:** UpdateNotificationPreference::execute() takes a ?ChannelPreference instead of ?bool $enabled (false becomes Off, true becomes WhenAway for a quietable channel or On for any other; null still deletes the row). ListNotificationPreferences rows drop the enabled key in favour of preference (off / on / when_away / always) and add quietable. Publish and run the new migration.
+* **gates:** DeliveryResolver::decideChannel() no longer consults the SuppressionPolicy, so a policy can no longer drop or re-defer a channel it already held. When the delay expires, an unread notification is delivered, a read one is discarded, and a channel switched off in the meantime is still discarded.
+
+### Features
+
+* **preferences:** let a recipient bypass suppression per notification type ([2609eb5](https://github.com/kirchDev/laravel-notification-delivery/commit/2609eb5e7683a1f4dcb70118d474e2b51d1cf2e5)), closes [#12](https://github.com/kirchDev/laravel-notification-delivery/issues/12)
+
+
+### Bug Fixes
+
+* **gates:** stop re-asking the suppression policy for a deferred channel ([c2e9f9a](https://github.com/kirchDev/laravel-notification-delivery/commit/c2e9f9ac725e468523241aaf05fe94f999d05a8c)), closes [#11](https://github.com/kirchDev/laravel-notification-delivery/issues/11)
+
 ## [0.2.0](https://github.com/kirchDev/laravel-notification-delivery/compare/v0.1.1...v0.2.0) (2026-09-13)
 
 
