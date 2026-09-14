@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Illuminate\Support\Str;
 use KirchDev\NotificationDelivery\Actions\UpdateNotificationPreference;
+use KirchDev\NotificationDelivery\Enums\ChannelPreference;
 use KirchDev\NotificationDelivery\Enums\CoreChannel;
 use KirchDev\NotificationDelivery\Models\DeliveredNotification;
 use KirchDev\NotificationDelivery\Models\NotificationPreference;
@@ -29,7 +30,7 @@ it('stores a preference on ulid setups', function () {
     $user = UlidUser::create(['name' => 'U', 'email' => 'u2@example.com']);
 
     app(UpdateNotificationPreference::class)
-        ->execute($user, TestNotificationType::Invited, CoreChannel::Mail, false);
+        ->execute($user, TestNotificationType::Invited, CoreChannel::Mail, ChannelPreference::Off);
 
     expect(Str::isUlid(NotificationPreference::query()->sole()->getKey()))->toBeTrue();
 });

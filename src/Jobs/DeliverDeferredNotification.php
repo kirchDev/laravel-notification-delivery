@@ -23,6 +23,11 @@ use KirchDev\NotificationDelivery\Support\DeliveryResolver;
  * otherwise mail" fall out of the gates with no escalation logic anywhere: whoever saw the toast
  * has read the notification by now, and whoever was away has not.
  *
+ * The SuppressionPolicy is not consulted a second time: the hold was its verdict. When the delay
+ * expires an unread notification is delivered and a read one is discarded, and only gates 1–3 —
+ * a channel that became unavailable, or one the recipient switched off meanwhile — can still
+ * turn it down.
+ *
  * It sends through sendNow() with an explicit channel list rather than re-sending the
  * notification, because re-running via() would write a second inbox row for something that was
  * already delivered.
@@ -48,8 +53,8 @@ class DeliverDeferredNotification implements ShouldQueue
 
         $decision = $resolver->decideChannel($this->notifiable, $this->notification->type(), $this->channel);
 
-        // Deferring again would let a policy that always defers hold a notification forever, one
-        // delay at a time. One hold, then a verdict.
+        // Gates 1–3 only: the policy already spent its say on the hold, so the only verdicts left
+        // are "still unavailable" and "switched off in the meantime".
         if (! $decision->isSend()) {
             return;
         }

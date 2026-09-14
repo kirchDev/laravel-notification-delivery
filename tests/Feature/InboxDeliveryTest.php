@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification as NotificationFacade;
 use KirchDev\NotificationDelivery\Channels\InboxChannel;
 use KirchDev\NotificationDelivery\Channels\LiveChannel;
+use KirchDev\NotificationDelivery\Enums\ChannelPreference;
 use KirchDev\NotificationDelivery\Enums\CoreChannel;
 use KirchDev\NotificationDelivery\Events\NotificationBroadcasted;
 use KirchDev\NotificationDelivery\Models\DeliveredNotification;
@@ -41,7 +42,7 @@ it('does not announce when the recipient switched live off', function () {
     Event::fake([NotificationBroadcasted::class]);
 
     $user = makeUser();
-    storePreference($user, TestNotificationType::Invited, CoreChannel::Live, false);
+    storePreference($user, TestNotificationType::Invited, CoreChannel::Live, ChannelPreference::Off);
 
     NotificationFacade::send([$user], notificationOf(TestNotificationType::Invited));
 
@@ -112,7 +113,7 @@ it('honours a preference stored after the channel object was built', function ()
 
     app()->forgetScopedInstances();
 
-    storePreference($user, TestNotificationType::Invited, CoreChannel::Live, false);
+    storePreference($user, TestNotificationType::Invited, CoreChannel::Live, ChannelPreference::Off);
 
     $manager->driver(InboxChannel::class)->send($user, notificationOf(TestNotificationType::Invited));
 

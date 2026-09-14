@@ -16,7 +16,8 @@ use WeakMap;
  *   1. Does the type know this channel, and can this notifiable resolve it?   (package)
  *   2. Is the channel locked? Then send, skipping gates 3 and 4.             (package)
  *   3. Has the recipient switched it off? No row means undecided, not off.   (package)
- *   4. Does the SuppressionPolicy say this is a bad moment?                  (application)
+ *   4. Does the SuppressionPolicy say this is a bad moment? Skipped for a     (application)
+ *      channel whose resolved preference is Always.
  *
  * Bound scoped, and the result memoised per (notifiable, notification) pair: via() asks for the
  * immediate channels and InboxChannel then asks whether `live` survived. Running the chain twice
@@ -85,19 +86,21 @@ final class DeliveryResolver
                 continue;
             }
 
-            // Gate 3 — an explicit false is off; null is undecided and falls back to the type's
-            // own default, which is what lets a new type ship without a backfill.
-            $preference = $this->preferences->resolve($notifiable, $type, $channel);
+            // Gate 3 — a stored row answers; no row is undecided and falls back to the type's own
+            // default, which is what lets a new type ship without a backfill.
+            $preference = $this->preferences->preference($notifiable, $type, $channel)
+                ?? $definition->defaultPreference($channel);
 
-            if ($preference === false || ($preference === null && ! $definition->isDefault($channel))) {
+            if (! $preference->delivers()) {
                 $dropped[] = $channel;
 
                 continue;
             }
 
             // Gate 4 — only channels that interrupt out of band get asked. `live` never does:
-            // the tab being open is the whole point of it.
-            if (! $channel->isQuietable()) {
+            // the tab being open is the whole point of it. Nor does a channel the recipient (or
+            // the type's default) wants always: that is a decision to be interrupted regardless.
+            if (! $channel->isQuietable() || $preference->bypassesSuppression()) {
                 $immediate[] = $channel;
 
                 continue;
@@ -124,8 +127,13 @@ final class DeliveryResolver
     }
 
     /**
-     * Run the chain for a single channel without the memo — what the deferred job re-checks with
+     * Run gates 1–3 for a single channel without the memo — what the deferred job re-checks with
      * when its delay expires.
+     *
+     * Gate 4 is deliberately not asked again. The hold already was the SuppressionPolicy's
+     * verdict; asking a second time would let a recipient who stays present past the delay be
+     * deferred again, and a second deferral has nowhere to go but a discard. What can still have
+     * changed — the channel becoming unavailable, the recipient switching it off — is gates 1–3.
      */
     public function decideChannel(object $notifiable, NotificationType $type, Channel $channel): SuppressionDecision
     {
@@ -139,16 +147,13 @@ final class DeliveryResolver
             return SuppressionDecision::send();
         }
 
-        $preference = $this->preferences->resolve($notifiable, $type, $channel);
+        $preference = $this->preferences->preference($notifiable, $type, $channel)
+            ?? $definition->defaultPreference($channel);
 
-        if ($preference === false || ($preference === null && ! $definition->isDefault($channel))) {
+        if (! $preference->delivers()) {
             return SuppressionDecision::drop();
         }
 
-        if (! $channel->isQuietable()) {
-            return SuppressionDecision::send();
-        }
-
-        return $this->suppression->decide($notifiable, $type, $channel);
+        return SuppressionDecision::send();
     }
 }

@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use KirchDev\NotificationDelivery\Contracts\Channel;
 use KirchDev\NotificationDelivery\Contracts\NotificationGroup;
 use KirchDev\NotificationDelivery\Contracts\NotificationType;
+use KirchDev\NotificationDelivery\Enums\ChannelPreference;
 use KirchDev\NotificationDelivery\NotificationDelivery;
 use KirchDev\NotificationDelivery\Support\PreferenceResolver;
 
@@ -18,9 +19,13 @@ use KirchDev\NotificationDelivery\Support\PreferenceResolver;
  * application decides which of them its settings page offers, and refining later costs a UI row
  * and no migration.
  *
- * Passing null for `$enabled` deletes the row, which is not the same as passing false: false is
- * "off", null is "I have no opinion, use the type's default". That distinction is what keeps the
- * table sparse and lets a changed default reach the people who never touched it.
+ * Passing null deletes the row, which is not the same as passing Off: Off is "off", null is "I
+ * have no opinion, use the type's default". That distinction is what keeps the table sparse and
+ * lets a changed default reach the people who never touched it.
+ *
+ * A preference the channel cannot express is refused rather than coerced: On for a quietable
+ * channel would silently mean one of WhenAway or Always, and WhenAway or Always for a channel gate 4
+ * never asks about would store a distinction that does nothing.
  */
 final class UpdateNotificationPreference
 {
@@ -30,12 +35,24 @@ final class UpdateNotificationPreference
         object $notifiable,
         NotificationType|NotificationGroup $target,
         Channel $channel,
-        ?bool $enabled,
+        ?ChannelPreference $preference,
     ): void {
         if (! $channel->userConfigurable()) {
             throw new InvalidArgumentException(
                 sprintf('The [%s] channel is not user-configurable.', $channel->value),
             );
+        }
+
+        if ($preference !== null && ! $preference->isAcceptedBy($channel)) {
+            throw new InvalidArgumentException(sprintf(
+                'The [%s] channel accepts only [%s], not [%s].',
+                $channel->value,
+                implode(', ', array_map(
+                    static fn (ChannelPreference $accepted): string => $accepted->value,
+                    ChannelPreference::acceptedBy($channel),
+                )),
+                $preference->value,
+            ));
         }
 
         $key = NotificationDelivery::morphKeyFor($notifiable);
@@ -53,31 +70,38 @@ final class UpdateNotificationPreference
             ->where('type', self::targetKey($target))
             ->where('channel', (string) $channel->value);
 
-        if ($enabled === null) {
+        if ($preference === null) {
             $query->delete();
             $this->preferences->forget($notifiable);
 
             return;
         }
 
+        // Both columns on every write: the row is one answer, so stepping back from Always has to
+        // clear the bypass rather than leave it behind.
+        $columns = [
+            'enabled' => $preference->delivers(),
+            'bypass_suppression' => $preference->bypassesSuppression() ? true : null,
+        ];
+
         $existing = $query->first();
 
         if ($existing !== null) {
-            $existing->forceFill(['enabled' => $enabled])->save();
+            $existing->forceFill($columns)->save();
             $this->preferences->forget($notifiable);
 
             return;
         }
 
-        $preference = new $model;
-        $preference->fill([
+        $row = new $model;
+        $row->fill([
             NotificationDelivery::MORPH_TYPE => NotificationDelivery::morphTypeFor($notifiable),
             NotificationDelivery::morphKey() => $key,
             'type' => self::targetKey($target),
             'channel' => (string) $channel->value,
-            'enabled' => $enabled,
+            ...$columns,
         ]);
-        $preference->save();
+        $row->save();
 
         $this->preferences->forget($notifiable);
     }

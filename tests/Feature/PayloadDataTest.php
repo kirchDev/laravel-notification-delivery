@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use KirchDev\NotificationDelivery\Channels\LiveChannel;
 use KirchDev\NotificationDelivery\Concerns\HasConfigurableKey;
+use KirchDev\NotificationDelivery\Enums\ChannelPreference;
 use KirchDev\NotificationDelivery\Enums\CoreChannel;
 use KirchDev\NotificationDelivery\Models\DeliveredNotification;
 use KirchDev\NotificationDelivery\Models\NotificationPreference;
@@ -161,4 +162,30 @@ it('keeps a locked channel that an explicit list forgot to repeat', function () 
     expect($definition->channels())->toBe([CoreChannel::Inbox, CoreChannel::Mail])
         ->and($definition->knows(CoreChannel::Inbox))->toBeTrue()
         ->and($definition->isDefault(CoreChannel::Mail))->toBeFalse();
+});
+
+it('knows a channel declared always, and has it on by default', function () {
+    // Listed in neither `default` nor an explicit `available` — declaring a channel always is
+    // declaring it known, the same way `locked` is.
+    $definition = new NotificationDefinition(
+        locked: [CoreChannel::Inbox],
+        available: [CoreChannel::Live],
+        always: [CoreChannel::Mail],
+    );
+
+    expect($definition->channels())->toBe([CoreChannel::Inbox, CoreChannel::Live, CoreChannel::Mail])
+        ->and($definition->isDefault(CoreChannel::Mail))->toBeTrue()
+        ->and($definition->defaultPreference(CoreChannel::Mail))->toBe(ChannelPreference::Always)
+        ->and($definition->defaultPreference(CoreChannel::Live))->toBe(ChannelPreference::Off);
+});
+
+it('reads a default without always as when away, or as on for a channel that is never quiet', function () {
+    $definition = new NotificationDefinition(
+        default: [CoreChannel::Live, CoreChannel::Mail],
+        locked: [CoreChannel::Inbox],
+    );
+
+    expect($definition->defaultPreference(CoreChannel::Mail))->toBe(ChannelPreference::WhenAway)
+        ->and($definition->defaultPreference(CoreChannel::Live))->toBe(ChannelPreference::On)
+        ->and($definition->defaultPreference(CoreChannel::Inbox))->toBe(ChannelPreference::On);
 });

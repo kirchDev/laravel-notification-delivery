@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Notification as NotificationFacade;
 use KirchDev\NotificationDelivery\Channels\InboxChannel;
 use KirchDev\NotificationDelivery\Channels\LiveChannel;
 use KirchDev\NotificationDelivery\Contracts\SuppressionPolicy;
+use KirchDev\NotificationDelivery\Enums\ChannelPreference;
 use KirchDev\NotificationDelivery\Enums\CoreChannel;
 use KirchDev\NotificationDelivery\Support\DeliveryResolver;
 use KirchDev\NotificationDelivery\Tests\Fixtures\CountingSuppression;
@@ -40,13 +41,13 @@ it('keeps a locked channel whatever the recipient asks for', function () {
 it('refuses to store a preference for a channel that is not user-configurable', function () {
     $user = makeUser();
 
-    expect(fn () => storePreference($user, TestNotificationType::Invited, CoreChannel::Inbox, false))
+    expect(fn () => storePreference($user, TestNotificationType::Invited, CoreChannel::Inbox, ChannelPreference::Off))
         ->toThrow(InvalidArgumentException::class);
 });
 
 it('drops a channel the recipient switched off', function () {
     $user = makeUser();
-    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, false);
+    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, ChannelPreference::Off);
 
     expect(notificationOf(TestNotificationType::Invited)->via($user))
         ->toBe([InboxChannel::class, LiveChannel::class]);
@@ -57,7 +58,7 @@ it('keeps a channel the recipient switched on that is off by default', function 
 
     expect(notificationOf(TestNotificationType::OptIn)->via($user))->toBe([InboxChannel::class]);
 
-    storePreference($user, TestNotificationType::OptIn, CoreChannel::Mail, true);
+    storePreference($user, TestNotificationType::OptIn, CoreChannel::Mail, ChannelPreference::WhenAway);
 
     expect(notificationOf(TestNotificationType::OptIn)->via($user))->toBe([InboxChannel::class, 'mail']);
 });
@@ -87,7 +88,7 @@ it('drops mail for a notifiable that does not route notifications at all', funct
 
 it('lets a group preference stand in for every type in it', function () {
     $user = makeUser();
-    storePreference($user, TestGroup::Organisation, CoreChannel::Mail, false);
+    storePreference($user, TestGroup::Organisation, CoreChannel::Mail, ChannelPreference::Off);
 
     expect(notificationOf(TestNotificationType::Invited)->via($user))
         ->toBe([InboxChannel::class, LiveChannel::class]);
@@ -95,8 +96,8 @@ it('lets a group preference stand in for every type in it', function () {
 
 it('lets a type preference win over the group it belongs to', function () {
     $user = makeUser();
-    storePreference($user, TestGroup::Organisation, CoreChannel::Mail, false);
-    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, true);
+    storePreference($user, TestGroup::Organisation, CoreChannel::Mail, ChannelPreference::Off);
+    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, ChannelPreference::WhenAway);
 
     expect(notificationOf(TestNotificationType::Invited)->via($user))->toContain('mail');
 });
@@ -112,7 +113,7 @@ it('answers the same question the same way twice', function () {
 it('decides per recipient, not per notification', function () {
     $one = makeUser('one@example.com');
     $two = makeUser('two@example.com');
-    storePreference($two, TestNotificationType::Invited, CoreChannel::Mail, false);
+    storePreference($two, TestNotificationType::Invited, CoreChannel::Mail, ChannelPreference::Off);
 
     $notification = notificationOf();
     $resolver = app(DeliveryResolver::class);
@@ -123,7 +124,7 @@ it('decides per recipient, not per notification', function () {
 
 it('reports what it dropped', function () {
     $user = makeUser();
-    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, false);
+    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, ChannelPreference::Off);
 
     $decision = app(DeliveryResolver::class)->decide($user, notificationOf());
 

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Notification as NotificationFacade;
+use KirchDev\NotificationDelivery\Enums\ChannelPreference;
 use KirchDev\NotificationDelivery\Enums\CoreChannel;
 use KirchDev\NotificationDelivery\Models\DeliveredNotification;
 use KirchDev\NotificationDelivery\Models\NotificationPreference;
@@ -34,7 +35,7 @@ it('stores a notification under a renamed morph key column', function () {
 it('stores a preference under a renamed morph key column', function () {
     $user = makeUser();
 
-    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, false);
+    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, ChannelPreference::Off);
 
     expect(NotificationPreference::query()->sole()->getAttribute('recipient_id'))->toEqual($user->getKey())
         ->and(notificationOf(TestNotificationType::Invited)->via($user))->not->toContain('mail');

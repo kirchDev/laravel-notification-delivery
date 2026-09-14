@@ -7,14 +7,18 @@ use Illuminate\Support\Facades\Queue;
 use KirchDev\NotificationDelivery\Channels\InboxChannel;
 use KirchDev\NotificationDelivery\Channels\LiveChannel;
 use KirchDev\NotificationDelivery\Contracts\SuppressionPolicy;
+use KirchDev\NotificationDelivery\Enums\ChannelPreference;
 use KirchDev\NotificationDelivery\Enums\CoreChannel;
 use KirchDev\NotificationDelivery\Jobs\DeliverDeferredNotification;
 use KirchDev\NotificationDelivery\Models\DeliveredNotification;
 use KirchDev\NotificationDelivery\Support\DeliveryResolver;
 use KirchDev\NotificationDelivery\Support\NeverSuppress;
 use KirchDev\NotificationDelivery\Support\SuppressionDecision;
+use KirchDev\NotificationDelivery\Tests\Fixtures\CountingSuppression;
 use KirchDev\NotificationDelivery\Tests\Fixtures\DeferMail;
 use KirchDev\NotificationDelivery\Tests\Fixtures\DropEverything;
+use KirchDev\NotificationDelivery\Tests\Fixtures\Notification\SecurityType;
+use KirchDev\NotificationDelivery\Tests\Fixtures\Notification\TestGroup;
 use KirchDev\NotificationDelivery\Tests\Fixtures\Notification\TestNotificationType;
 use KirchDev\NotificationDelivery\Tests\Fixtures\TestNotification;
 use KirchDev\NotificationDelivery\Tests\Fixtures\User;
@@ -104,25 +108,37 @@ it('delivers when an unread notification of the same type is the newest one', fu
     NotificationFacade::assertSentTo($user, $notification::class);
 });
 
-it('discards rather than deferring a second time', function () {
+it('delivers an unread held-back channel even while the policy would defer it again', function () {
     NotificationFacade::fake();
     app()->instance(SuppressionPolicy::class, new DeferMail);
 
     $user = makeUser();
 
-    // A policy that always defers would otherwise hold a notification forever, one delay at a
-    // time. One hold, then a verdict.
+    // The hold already was gate 4's verdict. A recipient who stays present past the delay would
+    // otherwise be deferred a second time — and a second deferral used to be a discard.
     (new DeliverDeferredNotification($user, notificationOf(), CoreChannel::Mail))
         ->handle(app(DeliveryResolver::class));
 
-    NotificationFacade::assertNothingSent();
+    NotificationFacade::assertSentTo($user, TestNotification::class);
+});
+
+it('never lets the policy drop a held-back channel on the second pass', function () {
+    NotificationFacade::fake();
+    app()->instance(SuppressionPolicy::class, new DropEverything);
+
+    $user = makeUser();
+
+    (new DeliverDeferredNotification($user, notificationOf(), CoreChannel::Mail))
+        ->handle(app(DeliveryResolver::class));
+
+    NotificationFacade::assertSentTo($user, TestNotification::class);
 });
 
 it('discards a held-back channel the recipient switched off in the meantime', function () {
     NotificationFacade::fake();
 
     $user = makeUser();
-    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, false);
+    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, ChannelPreference::Off);
 
     (new DeliverDeferredNotification($user, notificationOf(), CoreChannel::Mail))
         ->handle(app(DeliveryResolver::class));
@@ -169,3 +185,72 @@ it('writes exactly one inbox row when a deferred mail follows', function () {
     // notification, so via() never runs a second time and no second row appears.
     expect(DeliveredNotification::query()->count())->toBe(1);
 });
+
+it('skips the policy for a channel the recipient wants always', function () {
+    Queue::fake();
+    $policy = new CountingSuppression;
+    app()->instance(SuppressionPolicy::class, $policy);
+
+    $user = makeUser();
+    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, ChannelPreference::Always);
+
+    expect(notificationOf(TestNotificationType::Invited)->via($user))
+        ->toBe([InboxChannel::class, LiveChannel::class, 'mail'])
+        ->and($policy->calls)->toBe(0);
+});
+
+it('neither drops nor defers a channel the recipient wants always', function (SuppressionPolicy $policy) {
+    Queue::fake();
+    app()->instance(SuppressionPolicy::class, $policy);
+
+    $user = makeUser();
+    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, ChannelPreference::Always);
+
+    expect(notificationOf(TestNotificationType::Invited)->via($user))->toContain('mail');
+
+    Queue::assertNothingPushed();
+})->with([
+    'drop' => fn () => new DropEverything,
+    'defer' => fn () => new DeferMail,
+]);
+
+it('lets a group row ask for always on every type in it', function () {
+    app()->instance(SuppressionPolicy::class, new DropEverything);
+
+    $user = makeUser();
+    storePreference($user, TestGroup::Organisation, CoreChannel::Mail, ChannelPreference::Always);
+
+    expect(notificationOf(TestNotificationType::Invited)->via($user))->toContain('mail');
+});
+
+it('lets a type row put a channel back under the policy its group bypasses', function () {
+    app()->instance(SuppressionPolicy::class, new DropEverything);
+
+    $user = makeUser();
+    storePreference($user, TestGroup::Organisation, CoreChannel::Mail, ChannelPreference::Always);
+    storePreference($user, TestNotificationType::Invited, CoreChannel::Mail, ChannelPreference::WhenAway);
+
+    // Resolved row-wise: the type row answers the whole question, bypass included, rather than
+    // inheriting the group's bypass attribute by attribute.
+    expect(notificationOf(TestNotificationType::Invited)->via($user))->not->toContain('mail');
+});
+
+it('skips the policy for a channel the type declares always', function () {
+    app()->instance(SuppressionPolicy::class, new DropEverything);
+
+    expect(notificationOf(SecurityType::Alert)->via(makeUser()))
+        ->toBe([InboxChannel::class, LiveChannel::class, 'mail']);
+});
+
+it('lets a stored row override a type that declares always', function (TestGroup|SecurityType $target, ChannelPreference $preference) {
+    app()->instance(SuppressionPolicy::class, new DropEverything);
+
+    $user = makeUser();
+    storePreference($user, $target, CoreChannel::Mail, $preference);
+
+    expect(notificationOf(SecurityType::Alert)->via($user))->not->toContain('mail');
+})->with([
+    'type row, when away' => [SecurityType::Alert, ChannelPreference::WhenAway],
+    'group row, when away' => [TestGroup::Organisation, ChannelPreference::WhenAway],
+    'group row, off' => [TestGroup::Organisation, ChannelPreference::Off],
+]);
