@@ -1,5 +1,59 @@
 # Changelog
 
+## [0.3.0](https://github.com/kirchDev/laravel-notification-delivery/compare/v0.2.0...v0.3.0) (2026-09-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **preferences:** UpdateNotificationPreference::execute() takes a ?ChannelPreference instead of ?bool $enabled (false becomes Off, true becomes WhenAway for a quietable channel or On for any other; null still deletes the row). ListNotificationPreferences rows drop the enabled key in favour of preference (off / on / when_away / always) and add quietable. Publish and run the new migration.
+* **gates:** DeliveryResolver::decideChannel() no longer consults the SuppressionPolicy, so a policy can no longer drop or re-defer a channel it already held. When the delay expires, an unread notification is delivered, a read one is discarded, and a channel switched off in the meantime is still discarded.
+
+### Features
+
+* **preferences:** let a recipient bypass suppression per notification type ([2609eb5](https://github.com/kirchDev/laravel-notification-delivery/commit/2609eb5e7683a1f4dcb70118d474e2b51d1cf2e5)), closes [#12](https://github.com/kirchDev/laravel-notification-delivery/issues/12)
+
+
+### Bug Fixes
+
+* **gates:** stop re-asking the suppression policy for a deferred channel ([c2e9f9a](https://github.com/kirchDev/laravel-notification-delivery/commit/c2e9f9ac725e468523241aaf05fe94f999d05a8c)), closes [#11](https://github.com/kirchDev/laravel-notification-delivery/issues/11)
+
+## [0.2.0](https://github.com/kirchDev/laravel-notification-delivery/compare/v0.1.1...v0.2.0) (2026-09-13)
+
+
+### Features
+
+* **events:** dispatch NotificationRead when a notification is marked as read ([f40a025](https://github.com/kirchDev/laravel-notification-delivery/commit/f40a02583653446e019b211bd879314315632716)), closes [#7](https://github.com/kirchDev/laravel-notification-delivery/issues/7)
+
+
+### Bug Fixes
+
+* **config:** correct the codex policy match examples ([a536141](https://github.com/kirchDev/laravel-notification-delivery/commit/a53614159f29afc8a3f2e289c278b8ebf7d0bcef))
+
+
+### Documentation
+
+* reconcile the docs tree to the duxt page contract ([acda3b4](https://github.com/kirchDev/laravel-notification-delivery/commit/acda3b4d207303fa1fac811d31ec73cc5241f6c4)), closes [#9](https://github.com/kirchDev/laravel-notification-delivery/issues/9)
+
+
+### Refactor
+
+* **events:** share the recipient channel through a trait ([56c692e](https://github.com/kirchDev/laravel-notification-delivery/commit/56c692e425e85a66a6bc3bc7e86d841ea2c7dca3)), closes [#7](https://github.com/kirchDev/laravel-notification-delivery/issues/7)
+
+## [0.1.1](https://github.com/kirchDev/laravel-notification-delivery/compare/v0.1.0...v0.1.1) (2026-09-06)
+
+
+### Bug Fixes
+
+* **gates:** keep a locked channel an explicit available list omits ([e70612c](https://github.com/kirchDev/laravel-notification-delivery/commit/e70612cd0ddfa208111145dd341b4254c4736128))
+* **gates:** memoise the delivery decision across the notification's clones ([02354da](https://github.com/kirchDev/laravel-notification-delivery/commit/02354daf6afb3badb06450177af8c368a0004a6a))
+* **inbox:** resolve the inbox channel's collaborators per send ([d878d79](https://github.com/kirchDev/laravel-notification-delivery/commit/d878d79b31d0764893a4ab85715437ccf3f290c4))
+* **models:** store a renamed morph key column ([4ae9668](https://github.com/kirchDev/laravel-notification-delivery/commit/4ae9668e130f48957314d12db6224ce128257655))
+
+
+### Documentation
+
+* **agents:** correct the notes the delivery fixes invalidated ([98486d1](https://github.com/kirchDev/laravel-notification-delivery/commit/98486d1ed761c1bbbb132a6a839af1325f2fe5b4))
+
 ## 0.1.0 (2026-09-06)
 
 
