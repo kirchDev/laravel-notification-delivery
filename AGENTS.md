@@ -1,18 +1,4 @@
-# CLAUDE.md
-
-This file provides guidance to AI coding agents — Claude Code (claude.ai/code) and vendor-neutral tools such as Codex, OpenCode, Cursor, and Copilot — when working with code in this repository.
-
-## Agent instruction files
-
-`CLAUDE.md` and `AGENTS.md` are kept **byte-identical**. `CLAUDE.md` is what Claude Code reads; `AGENTS.md` is what vendor-neutral agent tools read — Codex, OpenCode, Cursor, Copilot, and whatever follows them. Two real files, deliberately not a symlink: not every tool resolves one.
-
-**After editing either file, copy it over the other — don't repeat the edit by hand:**
-
-```bash
-cp CLAUDE.md AGENTS.md   # or the reverse, whichever you just edited
-```
-
-Retyping a change is exactly how the two drift; one reflowed line or reworded clause is enough. `diff CLAUDE.md AGENTS.md` must print nothing. If it ever does, treat it as a defect and fix it by letting one file win wholesale — never by merging them.
+# kirchdev/laravel-notification-delivery
 
 ## What this is
 
@@ -73,6 +59,6 @@ Everything host-facing is a contract in `src/Contracts/` (`Channel`, `Notificati
 - `bootPackageMigrations()` is **overridden** to return early outside the console: upstream computes each published name — globbing the consumer's `database/migrations` — before its own `runningInConsole()` check, so a request-time boot would otherwise pay a directory scan per migration. The guard stands down if `runsMigrations()` is ever switched on.
 - The provider extends `Spatie\LaravelPackageTools\PackageServiceProvider`. Wiring goes in `packageRegistered()`; `configurePackage()` carries only the config file, the command and the migrations. Booting the provider by hand in a test needs `->register()->boot()` — `$this->package` is built in `register()`.
 - **The prune command refuses a negative window** rather than clamping it to zero. Clamping would read as "delete everything older than right now", which is the one outcome a typo in a retention setting must never produce. Both windows default to `null`: never delete.
-- `resources/boost/` is **consumer-facing**, unlike `CLAUDE.md` / `AGENTS.md`. Laravel Boost discovers it purely from the filesystem — it reads the consumer's root `composer.json` and looks for `vendor/kirchdev/laravel-notification-delivery/resources/boost/{guidelines,skills}` — so there is no dependency on `laravel/boost` here and nothing to register. The paths are the whole contract; renaming a directory removes the package from `boost:install` without an error.
+- `resources/boost/` is **consumer-facing**, unlike `AGENTS.md`. Laravel Boost discovers it purely from the filesystem — it reads the consumer's root `composer.json` and looks for `vendor/kirchdev/laravel-notification-delivery/resources/boost/{guidelines,skills}` — so there is no dependency on `laravel/boost` here and nothing to register. The paths are the whole contract; renaming a directory removes the package from `boost:install` without an error.
 - Third-party guidelines get **no version resolution and no fallback**: everything under `guidelines/` is always loaded, and a guideline that throws while rendering is silently replaced by an empty string. Keep `$assist` calls inside the documented `GuidelineAssist` surface (`BoostResourcesTest` asserts it against an allowlist and renders every guideline through Boost's own placeholder pipeline). A `SKILL.md` missing `name` or `description` frontmatter is discarded just as silently; keep that frontmatter flat `key: value`, since Boost parses it with `symfony/yaml` and the suite — which does not depend on it — parses it by hand.
 - Tests use Testbench; there is no `bootstrap/app.php`. Add new setup to `tests/TestCase.php` / `tests/Pest.php`. A test that calls `migrate:fresh` must call `TestCase::restoreBaselineSchema()` afterwards, not the package path alone — `migrate:fresh` drops the host `users` table too.
