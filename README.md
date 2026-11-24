@@ -90,9 +90,9 @@ The notification itself extends `TypedNotification` and implements `type()` and 
 
 ## ✨ Features
 
-- **📥 A real inbox** — stored notifications with read/unread state, so an offline recipient still finds it later. Keyed by a **stable type string**, not a class name: classes move, and moved classes leave historical rows pointing nowhere.
+- **📥 A real inbox** — stored notifications with read/unread state, so an offline recipient still finds it later. Keyed by a **stable type string**, not a class name.
 - **🎚️ Preferences that resolve three ways** — per type, per group, or the type's own default. Sparse storage means a new type ships with a sensible default and no backfill.
-- **🚪 A gate chain before `via()`** — availability, locked channels, the recipient's choice, then your own suppression policy. Four gates, in order, each able to stop the chain.
+- **🚪 A gate chain before `via()`** — availability, locked channels, the recipient's choice, then your own suppression policy.
 - **🧩 Channels are an interface, not an enum** — the package ships `inbox`, `live` and `mail`; you add push, SMS or anything else with your own enum. Nothing here is closed.
 - **⏳ Deferred delivery** — `via()` cannot wait, so a held-back channel leaves it and a job re-checks later, delivering only if the notification is still unread.
 - **📡 One broadcast, two jobs** — the same event carries the data sync **and** the interruption, so switching the toast off never leaves the bell stale.
@@ -133,7 +133,7 @@ The package ships **no routes** — every operation is a plain action you call f
 $inbox  = app(ListNotifications::class)->execute($user, limit: 20);
 $unread = app(CountUnreadNotifications::class)->execute($user);
 
-app(MarkNotificationAsRead::class)->execute($user, $id);  // scoped to $user — an id from a request cannot reach another inbox
+app(MarkNotificationAsRead::class)->execute($user, $id);  // scoped to $user
 app(UpdateNotificationPreference::class)->execute($user, $type, CoreChannel::Mail, ChannelPreference::Always);
 ```
 
