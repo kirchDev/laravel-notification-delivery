@@ -101,11 +101,11 @@ The notification itself extends `TypedNotification` and implements `type()` and 
 
 ## 📬 The three channels
 
-| Channel | Does                                                               | Configurable | Quietable |
-| :------ | :----------------------------------------------------------------- | :----------- | :-------- |
-| `inbox` | Writes the row **and** fires `NotificationBroadcasted`. The truth. | never        | no        |
-| `live`  | The toast in an open tab — sets `announce` on the payload.         | per type     | no        |
-| `mail`  | Laravel's own mail channel.                                        | per type     | yes       |
+| Channel | Does                                                               | Configurable      | Quietable |
+| :------ | :----------------------------------------------------------------- | :---------------- | :-------- |
+| `inbox` | Writes the row **and** fires `NotificationBroadcasted`. The truth. | never             | no        |
+| `live`  | The toast in an open tab — sets `announce` on the payload.         | per type or group | no        |
+| `mail`  | Laravel's own mail channel.                                        | per type or group | yes       |
 
 Quietable is gate 4's applicability test below. `live` is deliberately not — the tab being open is the whole point of it, so holding it back for somebody who is present is the opposite of what presence means. Push, its sibling that interrupts through the OS, is.
 
@@ -262,7 +262,7 @@ Then list it in `notification-delivery.channels.enums`.
 <details>
 <summary>Three schema decisions worth knowing before you extend it</summary>
 
-- **The recipient is a morph, not a `user_id`.** An invitation sent to an address with no account yet still needs a row, and a `NOT NULL user_id` has none for it.
+- **The recipient is a morph, not a `user_id`.** An invitation — a model of its own — sent to somebody with no account yet still needs a row, and a `NOT NULL user_id` has none for it.
 - **There is no tenant column.** Filtering an inbox by the active tenant produces a bell that hides things depending on where the reader happens to be standing. The tenant belongs in `payload`, where the message text needs it anyway — and the package then needs no notion of organisations at all. Disagree? Published migrations are yours; add the column.
 - **The table is not called `notifications`.** Laravel's own database channel claims that name, and leaving it free is what lets you keep using that channel alongside this package.
 
