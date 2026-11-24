@@ -6,7 +6,7 @@
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/kirchdev/laravel-notification-delivery.svg?style=flat-square&color=4f46e5)](https://packagist.org/packages/kirchdev/laravel-notification-delivery)
 [![Total Downloads](https://img.shields.io/packagist/dt/kirchdev/laravel-notification-delivery.svg?style=flat-square&color=4f46e5)](https://packagist.org/packages/kirchdev/laravel-notification-delivery)
-[![Tests](https://img.shields.io/github/actions/workflow/status/kirchDev/laravel-notification-delivery/ci.yml?branch=main&style=flat-square&label=tests)](https://github.com/kirchDev/laravel-notification-delivery/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/kirchDev/laravel-notification-delivery/ci.yml?branch=dev&style=flat-square&label=tests)](https://github.com/kirchDev/laravel-notification-delivery/actions/workflows/ci.yml)
 [![PHP Version](https://img.shields.io/packagist/dependency-v/kirchdev/laravel-notification-delivery/php?style=flat-square&color=8993be)](https://packagist.org/packages/kirchdev/laravel-notification-delivery)
 [![Laravel Version](https://img.shields.io/packagist/dependency-v/kirchdev/laravel-notification-delivery/illuminate%2Fsupport?style=flat-square&label=laravel&color=ff2d20)](https://packagist.org/packages/kirchdev/laravel-notification-delivery)
 [![License: MIT](https://img.shields.io/packagist/l/kirchdev/laravel-notification-delivery.svg?style=flat-square&color=10b981)](LICENSE)
