@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.3.1](https://github.com/kirchDev/laravel-notification-delivery/compare/v0.3.0...v0.3.1) (2026-11-25)
+
+
+### Bug Fixes
+
+* **channels:** let the first registered enum win a colliding value ([d348fcf](https://github.com/kirchDev/laravel-notification-delivery/commit/d348fcfea15701ab02c9c8a6748e7bc49c10b387))
+
+
+### Documentation
+
+* **agents:** cut the agent notes down to their rules ([99ea076](https://github.com/kirchDev/laravel-notification-delivery/commit/99ea076a7c21f6354cf3660e117ae9b2277216dc))
+* **agents:** make AGENTS.md the only agent instruction file ([3e478c3](https://github.com/kirchDev/laravel-notification-delivery/commit/3e478c33000c0753cf6c6b48175159bc1ea50629))
+* **contributing:** tighten the guide and point agents at AGENTS.md ([be9dca8](https://github.com/kirchDev/laravel-notification-delivery/commit/be9dca8cd06dd561b762bf611fc0b2e0a7a83c39))
+* correct the facts the delivery and channel pages got wrong ([ccd5140](https://github.com/kirchDev/laravel-notification-delivery/commit/ccd514006a574c7339c3317f1c06f070422b732c))
+* **guides:** restate the channel collision rule the registry now keeps ([212b79c](https://github.com/kirchDev/laravel-notification-delivery/commit/212b79cbde3f3c9bc39340181d26703886a05966))
+* **readme:** correct the configurable column and the invitation example ([ea22057](https://github.com/kirchDev/laravel-notification-delivery/commit/ea22057f5c01bb145837901ad8143c650e6740cc))
+* **readme:** drop three restated claims ([961841f](https://github.com/kirchDev/laravel-notification-delivery/commit/961841f644a1d1d8dfc252c28ea0f9873c873800))
+* **readme:** point the tests badge at dev ([e66e89c](https://github.com/kirchDev/laravel-notification-delivery/commit/e66e89cc548356baeb9079a08f7b5ecac107b42b))
+
 ## [0.3.0](https://github.com/kirchDev/laravel-notification-delivery/compare/v0.2.0...v0.3.0) (2026-09-14)
 
 
