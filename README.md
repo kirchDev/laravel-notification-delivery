@@ -6,7 +6,7 @@
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/kirchdev/laravel-notification-delivery.svg?style=flat-square&color=4f46e5)](https://packagist.org/packages/kirchdev/laravel-notification-delivery)
 [![Total Downloads](https://img.shields.io/packagist/dt/kirchdev/laravel-notification-delivery.svg?style=flat-square&color=4f46e5)](https://packagist.org/packages/kirchdev/laravel-notification-delivery)
-[![Tests](https://img.shields.io/github/actions/workflow/status/kirchDev/laravel-notification-delivery/ci.yml?branch=main&style=flat-square&label=tests)](https://github.com/kirchDev/laravel-notification-delivery/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/kirchDev/laravel-notification-delivery/ci.yml?branch=dev&style=flat-square&label=tests)](https://github.com/kirchDev/laravel-notification-delivery/actions/workflows/ci.yml)
 [![PHP Version](https://img.shields.io/packagist/dependency-v/kirchdev/laravel-notification-delivery/php?style=flat-square&color=8993be)](https://packagist.org/packages/kirchdev/laravel-notification-delivery)
 [![Laravel Version](https://img.shields.io/packagist/dependency-v/kirchdev/laravel-notification-delivery/illuminate%2Fsupport?style=flat-square&label=laravel&color=ff2d20)](https://packagist.org/packages/kirchdev/laravel-notification-delivery)
 [![License: MIT](https://img.shields.io/packagist/l/kirchdev/laravel-notification-delivery.svg?style=flat-square&color=10b981)](LICENSE)
@@ -90,9 +90,9 @@ The notification itself extends `TypedNotification` and implements `type()` and 
 
 ## ✨ Features
 
-- **📥 A real inbox** — stored notifications with read/unread state, so an offline recipient still finds it later. Keyed by a **stable type string**, not a class name: classes move, and moved classes leave historical rows pointing nowhere.
+- **📥 A real inbox** — stored notifications with read/unread state, so an offline recipient still finds it later. Keyed by a **stable type string**, not a class name.
 - **🎚️ Preferences that resolve three ways** — per type, per group, or the type's own default. Sparse storage means a new type ships with a sensible default and no backfill.
-- **🚪 A gate chain before `via()`** — availability, locked channels, the recipient's choice, then your own suppression policy. Four gates, in order, each able to stop the chain.
+- **🚪 A gate chain before `via()`** — availability, locked channels, the recipient's choice, then your own suppression policy.
 - **🧩 Channels are an interface, not an enum** — the package ships `inbox`, `live` and `mail`; you add push, SMS or anything else with your own enum. Nothing here is closed.
 - **⏳ Deferred delivery** — `via()` cannot wait, so a held-back channel leaves it and a job re-checks later, delivering only if the notification is still unread.
 - **📡 One broadcast, two jobs** — the same event carries the data sync **and** the interruption, so switching the toast off never leaves the bell stale.
@@ -101,11 +101,11 @@ The notification itself extends `TypedNotification` and implements `type()` and 
 
 ## 📬 The three channels
 
-| Channel | Does                                                               | Configurable | Quietable |
-| :------ | :----------------------------------------------------------------- | :----------- | :-------- |
-| `inbox` | Writes the row **and** fires `NotificationBroadcasted`. The truth. | never        | no        |
-| `live`  | The toast in an open tab — sets `announce` on the payload.         | per type     | no        |
-| `mail`  | Laravel's own mail channel.                                        | per type     | yes       |
+| Channel | Does                                                               | Configurable      | Quietable |
+| :------ | :----------------------------------------------------------------- | :---------------- | :-------- |
+| `inbox` | Writes the row **and** fires `NotificationBroadcasted`. The truth. | never             | no        |
+| `live`  | The toast in an open tab — sets `announce` on the payload.         | per type or group | no        |
+| `mail`  | Laravel's own mail channel.                                        | per type or group | yes       |
 
 Quietable is gate 4's applicability test below. `live` is deliberately not — the tab being open is the whole point of it, so holding it back for somebody who is present is the opposite of what presence means. Push, its sibling that interrupts through the OS, is.
 
@@ -133,7 +133,7 @@ The package ships **no routes** — every operation is a plain action you call f
 $inbox  = app(ListNotifications::class)->execute($user, limit: 20);
 $unread = app(CountUnreadNotifications::class)->execute($user);
 
-app(MarkNotificationAsRead::class)->execute($user, $id);  // scoped to $user — an id from a request cannot reach another inbox
+app(MarkNotificationAsRead::class)->execute($user, $id);  // scoped to $user
 app(UpdateNotificationPreference::class)->execute($user, $type, CoreChannel::Mail, ChannelPreference::Always);
 ```
 
@@ -262,7 +262,7 @@ Then list it in `notification-delivery.channels.enums`.
 <details>
 <summary>Three schema decisions worth knowing before you extend it</summary>
 
-- **The recipient is a morph, not a `user_id`.** An invitation sent to an address with no account yet still needs a row, and a `NOT NULL user_id` has none for it.
+- **The recipient is a morph, not a `user_id`.** An invitation — a model of its own — sent to somebody with no account yet still needs a row, and a `NOT NULL user_id` has none for it.
 - **There is no tenant column.** Filtering an inbox by the active tenant produces a bell that hides things depending on where the reader happens to be standing. The tenant belongs in `payload`, where the message text needs it anyway — and the package then needs no notion of organisations at all. Disagree? Published migrations are yours; add the column.
 - **The table is not called `notifications`.** Laravel's own database channel claims that name, and leaving it free is what lets you keep using that channel alongside this package.
 

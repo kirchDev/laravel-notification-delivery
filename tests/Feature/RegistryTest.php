@@ -6,6 +6,7 @@ use KirchDev\NotificationDelivery\Enums\CoreChannel;
 use KirchDev\NotificationDelivery\Support\ChannelRegistry;
 use KirchDev\NotificationDelivery\Support\TypeRegistry;
 use KirchDev\NotificationDelivery\Tests\Fixtures\Notification\ExtraChannel;
+use KirchDev\NotificationDelivery\Tests\Fixtures\Notification\OverridingMailChannel;
 use KirchDev\NotificationDelivery\Tests\Fixtures\Notification\TestNotificationType;
 
 it('lists the core channels in UI order', function () {
@@ -20,6 +21,15 @@ it('takes an application s own channel enum alongside the core one', function ()
     expect($registry->all())->toBe([CoreChannel::Inbox, CoreChannel::Live, CoreChannel::Mail, ExtraChannel::Push])
         ->and($registry->find('push'))->toBe(ExtraChannel::Push)
         ->and($registry->find('carrier-pigeon'))->toBeNull();
+});
+
+it('lets the first registered enum win a colliding value, whatever its sort order', function () {
+    config()->set('notification-delivery.channels.enums', [OverridingMailChannel::class, CoreChannel::class]);
+
+    $registry = new ChannelRegistry;
+
+    expect($registry->find('mail'))->toBe(OverridingMailChannel::Mail)
+        ->and($registry->all())->toBe([CoreChannel::Inbox, CoreChannel::Live, OverridingMailChannel::Mail]);
 });
 
 it('ignores anything registered that is not a channel', function () {

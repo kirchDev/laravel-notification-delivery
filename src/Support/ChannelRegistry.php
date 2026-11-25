@@ -23,6 +23,11 @@ final class ChannelRegistry
     /**
      * Every registered channel, in UI order.
      *
+     * Values are expected to be unique across the registered enums; where two collide, the
+     * first registered wins and the other is dropped, so an application overriding a core
+     * channel lists its own enum first. The collision is settled in registration order,
+     * before sorting — otherwise the override would depend on its sortOrder().
+     *
      * @return list<Channel>
      */
     public function all(): array
@@ -35,9 +40,11 @@ final class ChannelRegistry
 
         foreach (self::configuredEnums() as $enum) {
             foreach ($enum::cases() as $case) {
-                $channels[] = $case;
+                $channels[(string) $case->value] ??= $case;
             }
         }
+
+        $channels = array_values($channels);
 
         usort($channels, static fn (Channel $a, Channel $b): int => $a->sortOrder() <=> $b->sortOrder());
 
@@ -46,9 +53,6 @@ final class ChannelRegistry
 
     /**
      * The registered channel with this backed value, or null.
-     *
-     * Values are expected to be unique across the registered enums; where two collide, the
-     * first registered wins, so an application overriding a core channel lists its own enum first.
      */
     public function find(string $value): ?Channel
     {

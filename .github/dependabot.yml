@@ -1,5 +1,5 @@
 # Dependabot opens its PRs against the `dev` integration branch, not the default
-# branch. A main-only repo drops both `target-branch` lines — see CLAUDE.md.
+# branch. A main-only repo drops both `target-branch` lines.
 version: 2
 updates:
   - package-ecosystem: 'npm'
@@ -12,7 +12,8 @@ updates:
       interval: 'weekly'
     # Mirror the npm `minimumReleaseAge` (3 days): hold updates back until a
     # release has been public for a few days, dodging just-published malicious
-    # or broken versions. Applies to every ecosystem below too.
+    # or broken versions. Applies to every ecosystem below too, except our own
+    # reusable workflows (see the github-actions block).
     cooldown:
       default-days: 3
     labels:
@@ -54,8 +55,13 @@ updates:
     target-branch: 'dev'
     schedule:
       interval: 'monthly'
+    # First-party reusable workflows skip the cooldown: we publish them
+    # ourselves and pin them by SHA, so there is no third-party release to
+    # wait out.
     cooldown:
       default-days: 3
+      exclude:
+        - 'kirchDev/workflows*'
     labels:
       - 'dependencies'
       - 'stack: github-actions'
